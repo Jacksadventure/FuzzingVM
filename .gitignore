@@ -1,0 +1,51 @@
+# Creating a .gitignore file suitable for a C++ project in CLion
+
+gitignore_content = """
+# CLion-specific
+.idea/
+*.iml
+
+# CMake files
+cmake-build*/
+
+# Object files
+*.o
+*.so
+*.a
+
+# Makefile
+Makefile
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Log files
+*.log
+
+# Data files
+*.dat
+*.out
+
+# Dependencies
+/vendor/
+/external/
+
+# System-specific files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.orig
+"""
+
+# Saving the content to a .gitignore file
+file_path = '/mnt/data/gitignore.txt'
+with open(file_path, 'w') as file:
+    file.write(gitignore_content)
+
+file_path
+
