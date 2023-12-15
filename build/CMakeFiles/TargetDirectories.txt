@@ -1,0 +1,4 @@
+/Users/apple/Desktop/Fuzzingvm/build/CMakeFiles/Fuzzing.dir
+/Users/apple/Desktop/Fuzzingvm/build/CMakeFiles/main_test.dir
+/Users/apple/Desktop/Fuzzingvm/build/CMakeFiles/edit_cache.dir
+/Users/apple/Desktop/Fuzzingvm/build/CMakeFiles/rebuild_cache.dir

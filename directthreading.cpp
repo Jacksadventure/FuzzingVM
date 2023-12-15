@@ -94,7 +94,7 @@ private:
 
     void do_end() {
         st = std::stack<unsigned>();
-        instructions ={};
+        instructions = std::vector<unsigned>();
         ip = 0;
     }
 
@@ -131,6 +131,7 @@ private:
         if (st.top() == 0) {
             ip = target - 1;
         }
+        st.pop();
     }
 
     void do_gt() {

@@ -1,0 +1,17 @@
+[
+{
+  "directory": "/Users/apple/Desktop/Fuzzingvm/build",
+  "command": "/usr/bin/clang++ -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -std=gnu++2b -o CMakeFiles/Fuzzing.dir/main.cpp.o -c /Users/apple/Desktop/Fuzzingvm/main.cpp",
+  "file": "/Users/apple/Desktop/Fuzzingvm/main.cpp"
+},
+{
+  "directory": "/Users/apple/Desktop/Fuzzingvm/build",
+  "command": "/usr/bin/clang++ -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -std=gnu++2b -o CMakeFiles/Fuzzing.dir/directthreading.cpp.o -c /Users/apple/Desktop/Fuzzingvm/directthreading.cpp",
+  "file": "/Users/apple/Desktop/Fuzzingvm/directthreading.cpp"
+},
+{
+  "directory": "/Users/apple/Desktop/Fuzzingvm/build",
+  "command": "/usr/bin/clang++ -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -std=gnu++2b -o CMakeFiles/main_test.dir/test/main_test.cpp.o -c /Users/apple/Desktop/Fuzzingvm/test/main_test.cpp",
+  "file": "/Users/apple/Desktop/Fuzzingvm/test/main_test.cpp"
+}
+]
