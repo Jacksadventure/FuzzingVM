@@ -4,7 +4,7 @@
 
 // Define the set of instructions supported by the VM
 enum Instruction {
-    //caculate
+    // arithmetic 
     DT_ADD,
     DT_SUB,
     DT_MUL,
