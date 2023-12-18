@@ -3,32 +3,46 @@ The DirectThreadingVM class is a virtual machine implementation that uses a dire
 
 Arithmetic Instructions
 
-DT_ADD: Adds the top two values on the stack. The result is pushed back onto the stack.
-DT_SUB: Subtracts the top value on the stack from the second value. The result is pushed back onto the stack.
-DT_MUL: Multiplies the top two values on the stack. The result is pushed back onto the stack.
-DT_DIV: Divides the second value on the stack by the top value. The result is pushed back onto the stack. A check for division by zero is included.
-DT_INC: Increments the top value on the stack.
-DT_DEC: Decrements the top value on the stack.
+DT_ADD: Adds the top two unsigned integers on the stack.
+DT_SUB: Subtracts the top unsigned integer from the second top integer.
+DT_MUL: Multiplies the top two unsigned integers.
+DT_DIV: Divides the second top unsigned integer by the top integer.
+DT_SHL: Performs a left shift on the second top unsigned integer by the number of bits specified by the top integer.
+DT_SHR: Performs a right shift on the second top unsigned integer by the number of bits specified by the top integer.
+DT_FP_ADD: Adds the top two floating-point numbers.
+DT_FP_SUB: Subtracts the top floating-point number from the second top floating-point number.
+DT_FP_MUL: Multiplies the top two floating-point numbers.
+DT_FP_DIV: Divides the second top floating-point number by the top floating-point number.
+
 Memory Control Instructions
 
-DT_LOD: Loads a value from the memory buffer into the stack. The memory offset is specified in the instruction stream.
-DT_STO: Stores the top value on the stack into the memory buffer at the specified offset.
-DT_IMMI: Pushes an immediate value onto the stack. The value is specified in the instruction stream.
-DT_STO_IMMI: Stores an immediate value into the memory buffer at a specified offset.
-DT_END: Resets the stack and the instruction set, effectively ending the current program.
+DT_END: Clears the stack and resets the instruction pointer.
+DT_LOD: Loads an unsigned integer from the specified memory offset into the stack.
+DT_STO: Stores the top unsigned integer into the memory at the specified offset.
+DT_IMMI: Pushes an immediate unsigned integer value onto the stack.
+DT_INC: Increments the top unsigned integer on the stack.
+DT_DEC: Decrements the top unsigned integer on the stack.
+DT_STO_IMMI: Stores an immediate unsigned integer into the memory at the specified offset.
+DT_MEMCPY: Copies a block of memory from a source to a destination address.
+DT_MEMSET: Sets a block of memory to a specified value.
 Flow Control Instructions
 
-DT_JMP: Jumps to a specified instruction in the instruction stream.
-DT_JZ: Jumps to a specified instruction if the top value on the stack is zero.
-DT_GT: Compares the top two values on the stack and pushes 1 if the second value is greater than the top value; otherwise, pushes 0.
-DT_LT: Compares the top two values on the stack and pushes 1 if the second value is less than the top value; otherwise, pushes 0.
-DT_EQ: Compares the top two values on the stack and pushes 1 if they are equal; otherwise, pushes 0.
-DT_GT_EQ: Compares the top two values on the stack and pushes 1 if the second value is greater than or equal to the top value; otherwise, pushes 0.
-DT_LT_EQ: Compares the top two values on the stack and pushes 1 if the second value is less than or equal to the top value; otherwise, pushes 0.
-DT_SEEK: Outputs the top value on the stack for debugging purposes.
-Additional Details
+DT_JMP: Unconditionally jumps to a specified instruction.
+DT_JZ: Jumps to a specified instruction if the top unsigned integer is zero.
+DT_IF_ELSE: Chooses between two branches based on the condition at the top of the stack.
+DT_JUMP_IF: Jumps to a specified instruction if the condition is true.
+DT_GT, DT_LT, DT_EQ, DT_GT_EQ, DT_LT_EQ: Comparison instructions that push 1 (true) or 0 (false) based on the comparison result.
+DT_CALL: Calls a function at a specified address.
+DT_RET: Returns from a function call.
 
-Instruction Pointer (ip): Used to track the current execution point in the instruction stream.
-Stack (st): A stack used for performing operations and temporarily storing values.
-Memory Buffer (buffer): A buffer for storing and retrieving data.
-Function Pointer Table (instructionTable): Maps each instruction to its corresponding function within the DirectThreadingVM.
+Debugging Tools
+
+DT_SEEK: Prints the top value of the stack for debugging.
+DT_PRINT: Prints the top unsigned integer on the stack.
+DT_FP_PRINT: Prints the top floating-point number on the stack.
+DT_READ_INT: Reads an integer from standard input and stores it at a specified memory offset.
+DT_FP_READ: Reads a floating-point number from standard input and pushes it onto the stack.
+
+System Calls
+
+DT_SYSCALL: Handles system calls like file operations and process management. It utilizes a switch case to handle different syscall numbers like SYS_WRITE, SYS_READ, SYS_OPEN, SYS_CLOSE, and SYS_LSEEK.
