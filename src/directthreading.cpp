@@ -303,9 +303,11 @@ private:
         }
     }
 
-    void do_fp_print() {
+    void do_print_fp() {
         if (!st.empty()) {
-            std::cout <<(float)st.top() << std::endl;
+            uint32_t num = st.top();
+            float* floatPtr = (float*)&num;
+            std::cout <<*floatPtr << std::endl;
         } else {
             std::cerr << "Stack is empty." << std::endl;
         }
@@ -315,7 +317,7 @@ private:
         uint32_t offset = instructions[++ip];
         float val;
         std::cin >> val; 
-        write_mem32(buffer, val, offset);
+        write_mem32(buffer,from_float(val), offset);
     }
 
     void do_read_int() {
@@ -364,7 +366,7 @@ private:
         instructionTable[DT_SEEK] = &DirectThreadingVM::do_seek;
         instructionTable[DT_PRINT] = &DirectThreadingVM::do_print;
         instructionTable[DT_READ_INT] = &DirectThreadingVM::do_read_int;
-        instructionTable[DT_FP_PRINT] = &DirectThreadingVM::do_fp_print;
+        instructionTable[DT_FP_PRINT] = &DirectThreadingVM::do_print_fp;
         instructionTable[DT_FP_READ] = &DirectThreadingVM::do_read_fp;
         instructionTable[DT_SYSCALL] = &DirectThreadingVM::do_syscall;
     }

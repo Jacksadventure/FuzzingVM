@@ -48,6 +48,17 @@ TEST(FloatingPoint, HandlesFPAddition) {
     EXPECT_EQ(vm.debug_num, float_to_uint32(5.0f));
 }
 
+TEST(ArithmeticOperations, HandleDecrement) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 5,
+        DT_DEC,
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 4); // 5 - 1 = 4
+}
+
 TEST(FloatingPoint, HandlesFPSubtraction) {
     std::vector<uint32_t> instructions = {
         DT_IMMI, float_to_uint32(5.5f),
@@ -117,11 +128,111 @@ TEST(MemoryOperations, HandleLoadAndStore) {
     EXPECT_EQ(vm.debug_num, 100); 
 }
 
+TEST(MemoryOperations, HandleMemoryCopy) {
+    std::vector<uint32_t> instructions = {
+        DT_STO_IMMI, 0, 123,  
+        DT_MEMCPY, 4, 0, 4,   
+        DT_LOD, 4,           
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 123);
+}
+
+TEST(MemoryOperations, HandleMemorySet) {
+    std::vector<uint32_t> instructions = {
+        DT_MEMSET, 0, 255, 4, 
+        DT_LOD, 0,            
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 0xFFFFFFFF); 
+}
+
 TEST(ControlFlow, HandleJump) {
     std::vector<uint32_t> instructions = {DT_IMMI,0,DT_STO_IMMI,0,1,DT_LOD,0,DT_ADD,DT_LOD,0,DT_INC,DT_STO,0,DT_LOD,0,DT_IMMI,100,DT_GT,DT_JZ,5,DT_SEEK,DT_END};
     DirectThreadingVM vm;
     vm.run_vm(instructions);
     EXPECT_EQ(vm.debug_num, 5050); 
+}
+TEST(ComparisonOperations, HandleLessThan) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 5,
+        DT_IMMI, 10,
+        DT_LT,
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 1); // 5 < 10
+}
+
+TEST(ComparisonOperations, HandleEqualTo) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 10,
+        DT_IMMI, 10,
+        DT_EQ,
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 1); // 10 == 10
+}
+
+TEST(ComparisonOperations, HandleGreaterThanEqualTo) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 10,
+        DT_IMMI, 5,
+        DT_GT_EQ,
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 1); // 10 >= 5
+}
+
+TEST(ComparisonOperations, HandleLessThanEqualTo) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 5,
+        DT_IMMI, 10,
+        DT_LT_EQ,
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 1); // 5 <= 10
+}
+
+TEST(ControlFlow, HandleIfElse) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 1,               
+        DT_IF_ELSE, 9, 13,         
+        DT_IMMI, 0,               
+        DT_SEEK, DT_END,
+        DT_IMMI, 123,             
+        DT_SEEK, DT_END,
+        DT_IMMI, 456,             
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 123); 
+}
+
+TEST(ControlFlow, HandleConditionalJump) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 1,               
+        DT_JUMP_IF, 8,           
+        DT_IMMI, 0,               
+        DT_SEEK, DT_END,
+        DT_IMMI, 123,            
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 123); 
 }
 
 int main(int argc, char **argv) {
