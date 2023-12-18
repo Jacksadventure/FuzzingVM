@@ -1,5 +1,5 @@
 #include <iostream>
-#include "directthreading.cpp"
+#include "src/directthreading.cpp"
 
 int main() {
     DirectThreadingVM vm;
