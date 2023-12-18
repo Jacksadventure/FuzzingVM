@@ -13,10 +13,12 @@ int main() {
     std::vector<unsigned> program4 = {DT_IMMI,2,DT_IMMI,1,DT_GT,DT_JZ,13,DT_IMMI,3,DT_IMMI,4,DT_JMP,17,DT_IMMI,5,DT_IMMI,6,DT_ADD,DT_SEEK,DT_END};
     // Example program 5: sum up from 1 to 100;
     std::vector<unsigned> program5 = {DT_IMMI,0,DT_STO_IMMI,0,1,DT_LOD,0,DT_ADD,DT_LOD,0,DT_INC,DT_STO,0,DT_LOD,0,DT_IMMI,100,DT_GT,DT_JZ,5,DT_SEEK,DT_END};
+    std::vector<unsigned> program6 = {DT_IMMI,8,DT_IMMI,3,DT_SHR,DT_SEEK, DT_END};
     vm.run_vm(program1);
     vm.run_vm(program2);
     vm.run_vm(program3);
     vm.run_vm(program4);
     vm.run_vm(program5);
+    vm.run_vm(program6);
     return 0;
 }

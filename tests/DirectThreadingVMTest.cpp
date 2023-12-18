@@ -3,6 +3,10 @@
 #include "symbol.hpp"
 #include "directthreading.cpp"
 
+uint32_t float_to_uint32(float value) {
+    return *reinterpret_cast<uint32_t*>(&value);
+}
+
 TEST(Arithmetic, HandlesAddition) {
     std::vector<unsigned> instructions = {DT_IMMI, 5, DT_IMMI, 3, DT_ADD, DT_SEEK, DT_END};
     DirectThreadingVM vm;
@@ -31,6 +35,93 @@ TEST(Arithmetic, HandlesDivision) {
     DirectThreadingVM vm;
     vm.run_vm(instructions);
     EXPECT_EQ(vm.debug_num, 4);
+}
+
+TEST(FloatingPoint, HandlesFPAddition) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, float_to_uint32(4.5f),
+        DT_IMMI, float_to_uint32(0.5f),
+        DT_FP_ADD, DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, float_to_uint32(5.0f));
+}
+
+TEST(FloatingPoint, HandlesFPSubtraction) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, float_to_uint32(5.5f),
+        DT_IMMI, float_to_uint32(1.5f),
+        DT_FP_SUB, DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, float_to_uint32(4.0f));
+}
+
+TEST(FloatingPoint, HandlesFPMultiplication) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, float_to_uint32(2.0f),
+        DT_IMMI, float_to_uint32(3.5f),
+        DT_FP_MUL, DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, float_to_uint32(7.0f));
+}
+
+TEST(FloatingPoint, HandlesFPDivision) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, float_to_uint32(7.5f),
+        DT_IMMI, float_to_uint32(2.5f),
+        DT_FP_DIV, DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, float_to_uint32(3.0f));
+}
+
+TEST(BitwiseOperations, HandleLeftShift) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 1,  
+        DT_IMMI, 3,  
+        DT_SHL,      
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 8); 
+}
+
+TEST(BitwiseOperations, HandleRightShift) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 8,  
+        DT_IMMI, 3,  
+        DT_SHR,      
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 1); 
+}
+
+TEST(MemoryOperations, HandleLoadAndStore) {
+    std::vector<uint32_t> instructions = {        
+        DT_IMMI, 100,          
+        DT_STO, 0,                       
+        DT_LOD, 0,              
+        DT_SEEK, DT_END
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 100); 
+}
+
+TEST(ControlFlow, HandleJump) {
+    std::vector<uint32_t> instructions = {DT_IMMI,0,DT_STO_IMMI,0,1,DT_LOD,0,DT_ADD,DT_LOD,0,DT_INC,DT_STO,0,DT_LOD,0,DT_IMMI,100,DT_GT,DT_JZ,5,DT_SEEK,DT_END};
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 5050); 
 }
 
 int main(int argc, char **argv) {

@@ -335,6 +335,8 @@ private:
         instructionTable[DT_SUB] = &DirectThreadingVM::do_sub;
         instructionTable[DT_MUL] = &DirectThreadingVM::do_mul;
         instructionTable[DT_DIV] = &DirectThreadingVM::do_div;
+        instructionTable[DT_SHL] = &DirectThreadingVM::do_shl;
+        instructionTable[DT_SHR] = &DirectThreadingVM::do_shr;
         instructionTable[DT_FP_ADD] = &DirectThreadingVM::do_fp_add;
         instructionTable[DT_FP_SUB] = &DirectThreadingVM::do_fp_sub;
         instructionTable[DT_FP_MUL] = &DirectThreadingVM::do_fp_mul;

@@ -1,7 +1,15 @@
 DirectThreadingVMTest 5 0.00236016
 DirectThreadingVMTest_NOT_BUILT 0 0
-Arithmetic.HandlesAddition 3 0.00297523
-Arithmetic.HandlesSubtraction 3 0.00194174
-Arithmetic.HandlesMultiplication 2 0.00406709
-Arithmetic.HandlesDivision 1 0.00754358
+Arithmetic.HandlesAddition 13 0.000644105
+Arithmetic.HandlesSubtraction 13 0.000458694
+Arithmetic.HandlesMultiplication 12 0.000658892
+Arithmetic.HandlesDivision 11 0.000547325
+FloatingPoint.HandlesFPAddition 9 0.00116264
+FloatingPoint.HandlesFPSubtraction 8 0.000953855
+FloatingPoint.HandlesFPMultiplication 8 0.00108869
+FloatingPoint.HandlesFPDivision 8 0.000819935
+MemoryOperations.HandleLoadAndStore 4 0.00389972
+ControlFlow.HandleJump 3 0.0033866
+BitwiseOperations.HandleLeftShift 1 0.0109125
+BitwiseOperations.HandleRightShift 1 0.0117515
 ---
