@@ -1,11 +1,8 @@
 cmake_minimum_required(VERSION 3.23)
-project(FuzzingVM)
-
+project(DirectThreadingVM)
 set(CMAKE_CXX_STANDARD 23)
-
 add_subdirectory(src)
-enable_testing()
-add_subdirectory(tests)
-
 add_executable(main main.cpp)
 target_link_libraries(main DirectThreadingVM)
+enable_testing()
+add_subdirectory(tests)

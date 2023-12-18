@@ -4,7 +4,7 @@
 # compile CXX with /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -isystem /Users/apple/Desktop/Fuzzingvm/build/tests/googletest-src/googletest/include -isystem /Users/apple/Desktop/Fuzzingvm/build/tests/googletest-src/googletest
+CXX_INCLUDES = -I/Users/apple/Desktop/Fuzzingvm/src -isystem /Users/apple/Desktop/Fuzzingvm/build/tests/googletest-src/googletest/include -isystem /Users/apple/Desktop/Fuzzingvm/build/tests/googletest-src/googletest
 
 CXX_FLAGS =  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -std=gnu++2b
 

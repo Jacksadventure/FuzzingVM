@@ -19,12 +19,12 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 
 # Include the GoogleTest library
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+include_directories(${PROJECT_SOURCE_DIR}/src)
 
-# Create a test executable
+# Create the test executable
 add_executable(DirectThreadingVMTest DirectThreadingVMTest.cpp)
 
-# Link the test executable with the GoogleTest library and your VM library
+# Link the test executable with the GoogleTest libraries and your VM library
 target_link_libraries(DirectThreadingVMTest gtest gtest_main DirectThreadingVM)
-
-# Add the test executable to CTest
-add_test(NAME DirectThreadingVMTest COMMAND DirectThreadingVMTest)
+include(GoogleTest)
+gtest_discover_tests(DirectThreadingVMTest)

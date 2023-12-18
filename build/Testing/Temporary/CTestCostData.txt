@@ -1,2 +1,7 @@
-DirectThreadingVMTest 1 0.034019
+DirectThreadingVMTest 5 0.00236016
+DirectThreadingVMTest_NOT_BUILT 0 0
+Arithmetic.HandlesAddition 3 0.00297523
+Arithmetic.HandlesSubtraction 3 0.00194174
+Arithmetic.HandlesMultiplication 2 0.00406709
+Arithmetic.HandlesDivision 1 0.00754358
 ---

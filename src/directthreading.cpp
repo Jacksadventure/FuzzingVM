@@ -10,60 +10,7 @@
 #ifdef _WIN32
 #include <windows.h> // Windows-specific headers for file operations
 #endif
-// Define the set of instructions supported by the VM
-enum Instruction {
-    // arithmetic 
-    DT_ADD,
-    DT_SUB,
-    DT_MUL,
-    DT_DIV,
-    DT_SHL, 
-    DT_SHR,
-    DT_FP_ADD,   
-    DT_FP_SUB,   
-    DT_FP_MUL,   
-    DT_FP_DIV,   
-    //memory control
-    DT_END,
-    DT_LOD,
-    DT_STO,
-    DT_IMMI,
-    DT_INC,
-    DT_DEC,
-    DT_STO_IMMI,
-    DT_MEMCPY,
-    DT_MEMSET,
-    //flow control
-    DT_JMP,
-    DT_JZ,
-    DT_IF_ELSE,
-    DT_JUMP_IF,
-    DT_GT,
-    DT_LT,
-    DT_EQ,
-    DT_GT_EQ,
-    DT_LT_EQ,
-    DT_CALL,
-    DT_RET,
-    //Debug
-    DT_SEEK,
-    DT_PRINT,
-    DT_READ_INT,
-    DT_FP_PRINT,
-    DT_FP_READ,
-    //System
-    DT_SYSCALL,
-    
-};
-
-enum SyscallNumber {
-    SYS_WRITE,   // Write to a file descriptor
-    SYS_READ,    // Read from a file descriptor
-    SYS_OPEN,    // Open a file
-    SYS_CLOSE,   // Close a file descriptor
-    SYS_LSEEK,   // Reposition read/write file offset
-};
-
+#include "symbol.hpp"
 class DirectThreadingVM {
 private:
     uint32_t ip; // Instruction pointer
@@ -72,7 +19,6 @@ private:
     char* buffer; // Memory buffer
     void (DirectThreadingVM::*instructionTable[256])(void); // Function pointer table for instructions
     std::stack<uint32_t> callStack; // Call stack for function calls
-
     float to_float(uint32_t val) {
         return *reinterpret_cast<float*>(&val);
     }
@@ -169,7 +115,7 @@ private:
             std::cerr << "Error: Divided by zero error" << std::endl;
             return;
         }
-        st.push(a / b);
+        st.push(b / a);
     }
 
     void do_fp_add() {
@@ -182,7 +128,7 @@ private:
     void do_fp_sub() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
-        float result = a - b;
+        float result = b - a;
         st.push(from_float(result));
     }
 
@@ -200,7 +146,7 @@ private:
             std::cerr << "Division by zero error" << std::endl;
             return;
         }
-        float result = a / b;
+        float result = b / a;
         st.push(from_float(result));
     }
 
@@ -346,27 +292,30 @@ private:
         }
     }
     void do_seek() {
-        if (!st.empty()) {
-            std::cout << "Top of stack: " << st.top() << std::endl;
-        } else {
-            std::cout << "Stack is empty." << std::endl;
-        }
+        debug_num = st.top();
     }
 
     void do_print() {
-        uint32_t a = st.top(); st.pop();
-        std::cout << a << std::endl;
+        if (!st.empty()) {
+            std::cout <<(int)st.top() << std::endl;
+        } else {
+            std::cerr << "Stack is empty." << std::endl;
+        }
     }
 
     void do_fp_print() {
-        float value = to_float(st.top()); st.pop();
-        std::cout << value << std::endl;
+        if (!st.empty()) {
+            std::cout <<(float)st.top() << std::endl;
+        } else {
+            std::cerr << "Stack is empty." << std::endl;
+        }
     }
 
-    void do_fp_read() {
-        float value;
-        std::cin >> value; // Read floating-point number from stdin
-        st.push(from_float(value)); // Convert and push onto stack
+    void do_read_fp() {
+        uint32_t offset = instructions[++ip];
+        float val;
+        std::cin >> val; 
+        write_mem32(buffer, val, offset);
     }
 
     void do_read_int() {
@@ -414,13 +363,15 @@ private:
         instructionTable[DT_PRINT] = &DirectThreadingVM::do_print;
         instructionTable[DT_READ_INT] = &DirectThreadingVM::do_read_int;
         instructionTable[DT_FP_PRINT] = &DirectThreadingVM::do_fp_print;
-        instructionTable[DT_FP_READ] = &DirectThreadingVM::do_fp_read;
+        instructionTable[DT_FP_READ] = &DirectThreadingVM::do_read_fp;
         instructionTable[DT_SYSCALL] = &DirectThreadingVM::do_syscall;
     }
 
 public:
+    uint32_t debug_num;
     DirectThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) { // Initialize a 4MB buffer
         init_instruction_table();
+        debug_num = 0xFFFFFFFF;
     }
 
     ~DirectThreadingVM() {

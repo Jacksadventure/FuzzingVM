@@ -3,6 +3,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/DirectThreadingVMTest.dir/DirectThreadingVMTest.cpp.o.d"
   "DirectThreadingVMTest"
   "DirectThreadingVMTest.pdb"
+  "DirectThreadingVMTest[1]_tests.cmake"
 )
 
 # Per-language clean rules from dependency scanning.

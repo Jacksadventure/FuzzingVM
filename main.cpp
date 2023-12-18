@@ -1,6 +1,6 @@
 #include <iostream>
 #include "src/directthreading.cpp"
-
+#include "src/symbol.hpp"
 int main() {
     DirectThreadingVM vm;
     // Example program 1: Add 1 and 2, result = 3
