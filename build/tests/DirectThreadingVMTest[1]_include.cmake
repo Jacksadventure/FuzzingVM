@@ -1,5 +1,0 @@
-if(EXISTS "/Users/apple/Desktop/Fuzzingvm/build/tests/DirectThreadingVMTest[1]_tests.cmake")
-  include("/Users/apple/Desktop/Fuzzingvm/build/tests/DirectThreadingVMTest[1]_tests.cmake")
-else()
-  add_test(DirectThreadingVMTest_NOT_BUILT DirectThreadingVMTest_NOT_BUILT)
-endif()
