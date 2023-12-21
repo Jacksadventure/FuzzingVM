@@ -42,13 +42,4 @@ enum Instruction {
     DT_FP_READ,
     //System
     DT_SYSCALL,
-    
-};
-#pragma once
-enum SyscallNumber {
-    SYS_WRITE,   // Write to a file descriptor
-    SYS_READ,    // Read from a file descriptor
-    SYS_OPEN,    // Open a file
-    SYS_CLOSE,   // Close a file descriptor
-    SYS_LSEEK,   // Reposition read/write file offset
 };

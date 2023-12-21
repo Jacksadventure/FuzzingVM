@@ -73,5 +73,6 @@
         "unordered_set": "cpp",
         "variant": "cpp",
         "vector": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

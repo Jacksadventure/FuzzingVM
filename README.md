@@ -34,8 +34,8 @@ The `DirectThreadingVM` class is a virtual machine implementation that uses a di
 - **DT_IF_ELSE**: Chooses between two branches based on the condition at the top of the stack.(verified)
 - **DT_JUMP_IF**: Jumps to a specified instruction if the condition is true.(verified)
 - **DT_GT, DT_LT, DT_EQ, DT_GT_EQ, DT_LT_EQ**: Comparison instructions that push 1 (true) or 0 (false) based on the comparison result.(verified)
-- **DT_CALL**: Calls a function at a specified address.
-- **DT_RET**: Returns from a function call.
+- **DT_CALL**: Calls a function at a specified address.(verified)
+- **DT_RET**: Returns from a function call.(verified)
 
 ## Debugging Tools
 
@@ -44,10 +44,6 @@ The `DirectThreadingVM` class is a virtual machine implementation that uses a di
 - **DT_FP_PRINT**: Prints the top floating-point number on the stack.(verified)
 - **DT_READ_INT**: Reads an integer from standard input and stores it at a specified memory offset.(verified)
 - **DT_READ_FP**: Reads a floating-point number from standard input and pushes it onto the stack.(verified)
-
-## System Calls
-
-- **DT_SYSCALL**: Handles system calls like file operations and process management. It utilizes a switch case to handle different syscall numbers like `SYS_WRITE`, `SYS_READ`, `SYS_OPEN`, `SYS_CLOSE`, and `SYS_LSEEK`.
 
 ## How to Run
 

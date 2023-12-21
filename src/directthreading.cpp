@@ -14,7 +14,8 @@
 class DirectThreadingVM {
 private:
     uint32_t ip; // Instruction pointer
-    std::stack<uint32_t> st; // Stack for operations
+    std::vector<std::stack<uint32_t>> sts; // Stack for operations
+    std::stack<uint32_t> st;
     std::vector<uint32_t> instructions; // Instruction set
     char* buffer; // Memory buffer
     void (DirectThreadingVM::*instructionTable[256])(void); // Function pointer table for instructions
@@ -40,49 +41,6 @@ private:
     void read_memory(char* buffer, uint8_t* dst, uint32_t offset, uint32_t size) {
         memcpy(dst, buffer + offset, size);
     }
-
-    void handle_syscall(uint32_t syscall_num) {
-    switch (syscall_num) {
-        case SYS_WRITE: {
-            int fd = st.top(); st.pop();
-            uint32_t bufPtr = st.top(); st.pop();
-            size_t count = st.top(); st.pop();
-            ssize_t written = write(fd, buffer + bufPtr, count);
-            st.push(written);
-            break;
-        }
-        case SYS_READ: {
-            int fd = st.top(); st.pop();
-            uint32_t bufPtr = st.top(); st.pop();
-            size_t count = st.top(); st.pop();
-            ssize_t readBytes = read(fd, buffer + bufPtr, count);
-            st.push(readBytes);
-            break;
-        }
-        case SYS_OPEN: {
-            uint32_t filenamePtr = st.top(); st.pop();
-            int flags = st.top(); st.pop();
-            int mode = st.top(); st.pop(); 
-            int fd = open(reinterpret_cast<char*>(buffer + filenamePtr), flags, mode);
-            st.push(fd);
-            break;
-        }
-        case SYS_CLOSE: {
-            int fd = st.top(); st.pop();
-            int result = close(fd);
-            st.push(result);
-            break;
-        }
-        case SYS_LSEEK: {
-            int fd = st.top(); st.pop();
-            off_t offset = st.top(); st.pop();
-            int whence = st.top(); st.pop();
-            off_t newPos = lseek(fd, offset, whence);
-            st.push(newPos);
-            break;
-        }
-    }
-}
 
     uint32_t read_mem32(char* buffer, uint32_t offset) {
         uint32_t buf[1];
@@ -270,27 +228,33 @@ private:
         uint32_t b = st.top(); st.pop();
         st.push(b <= a ? 1 : 0);
     }
-    //untested_unsafe
+
     void do_call() {
-        uint32_t target = instructions[++ip]; // Function address
-        uint32_t num_params = instructions[++ip]; // Number of parameters
-        callStack.push(ip); // Save the return address
-        callStack.push(num_params); // Save the number of parameters
-        ip = target - 1; // Jump to the function
+        uint32_t target = instructions[++ip]; 
+        uint32_t num_params = instructions[++ip]; 
+        std::stack<uint32_t> newStack;
+         for (uint32_t i = 0; i < num_params; ++i) {
+            newStack.push(st.top());
+            st.pop();
+        }
+        sts.push_back(newStack);
+        st=sts.back();//st always refer to the top of stacks.
+        callStack.push(ip); 
+        ip = target - 1; 
     }
-    //untested_unsafe
+
     void do_ret() {
         if (callStack.empty()) {
             std::cerr << "Error: Call stack underflow" << std::endl;
             return;
         }
-        ip = callStack.top(); callStack.pop(); // Return address
-        uint32_t num_params = callStack.top(); callStack.pop(); // Number of parameters
-        // Clean up parameters from the stack
-        while (num_params--) {
-            st.pop();
-        }
+        uint32_t return_value = st.top();
+        ip = callStack.top(); callStack.pop(); 
+        sts.pop_back();
+        st = sts.back();
+        st.push(return_value);
     }
+
     void do_seek() {
         debug_num = st.top();
     }
@@ -325,11 +289,6 @@ private:
         int val;
         std::cin >> val;
         write_mem32(buffer, val, offset);
-    }
-
-    void do_syscall() {
-        uint32_t syscall_num = instructions[++ip];
-        handle_syscall(syscall_num);
     }
 
     void init_instruction_table() {
@@ -368,14 +327,15 @@ private:
         instructionTable[DT_READ_INT] = &DirectThreadingVM::do_read_int;
         instructionTable[DT_FP_PRINT] = &DirectThreadingVM::do_print_fp;
         instructionTable[DT_FP_READ] = &DirectThreadingVM::do_read_fp;
-        instructionTable[DT_SYSCALL] = &DirectThreadingVM::do_syscall;
     }
 
 public:
     uint32_t debug_num;
-    DirectThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) { // Initialize a 4MB buffer
+    DirectThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) { 
         init_instruction_table();
         debug_num = 0xFFFFFFFF;
+        sts.push_back(std::stack<uint32_t>());
+        st = sts.back();
     }
 
     ~DirectThreadingVM() {
@@ -387,6 +347,19 @@ public:
         for (ip = 0; ip < instructions.size(); ip++) {
             (this->*instructionTable[instructions[ip]])();
         }
+    }
+    
+    static std::vector<uint32_t> convertToVMFormat(const std::string& input) {
+        std::vector<uint32_t> output;
+        for (char c : input) {
+            output.push_back(static_cast<uint32_t>(c));
+        }
+        output.push_back(static_cast<uint32_t>('\0'));
+        return output;
+    }
+
+    char* getBuffer() {
+        return buffer;
     }
 };
 #endif // DIRECTTHREADING_H

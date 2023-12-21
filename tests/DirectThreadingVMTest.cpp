@@ -235,6 +235,20 @@ TEST(ControlFlow, HandleConditionalJump) {
     EXPECT_EQ(vm.debug_num, 123); 
 }
 
+TEST(FunctionCalls, HandleFunctionCallAndReturn) {
+    std::vector<uint32_t> instructions = {
+        DT_IMMI, 10,              
+        DT_CALL, 7, 1,              
+        DT_SEEK, DT_END,          
+        DT_IMMI, 2,               
+        DT_ADD,                  
+        DT_RET                    
+    };
+    DirectThreadingVM vm;
+    vm.run_vm(instructions);
+    EXPECT_EQ(vm.debug_num, 12);
+}
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

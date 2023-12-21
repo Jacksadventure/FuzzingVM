@@ -26,15 +26,24 @@ int main() {
     std::vector<unsigned> program9 = {DT_IMMI,float_to_uint32(4.5),DT_FP_PRINT,DT_END};
     // Example program 10: print(float) = input 
     std::vector<unsigned> program10 = {DT_FP_READ,0,DT_LOD,0,DT_FP_PRINT,DT_END};
-    vm.run_vm(program1);
-    vm.run_vm(program2);
-    vm.run_vm(program3);
-    vm.run_vm(program4);
-    vm.run_vm(program5);
-    vm.run_vm(program6);
-    vm.run_vm(program7);
-    vm.run_vm(program8);
-    vm.run_vm(program9);
-    vm.run_vm(program10);
+    // Example program 11: call function, 10+2=12
+    std::vector<unsigned> program11 = {
+        DT_IMMI, 10,              
+        DT_CALL, 7, 1,              
+        DT_SEEK, DT_END,          
+        DT_IMMI, 2,               
+        DT_ADD,                  
+        DT_RET};
+    // vm.run_vm(program1);
+    // vm.run_vm(program2);
+    // vm.run_vm(program3);
+    // vm.run_vm(program4);
+    // vm.run_vm(program5);
+    // vm.run_vm(program6);
+    // vm.run_vm(program7);
+    // vm.run_vm(program8);
+    // vm.run_vm(program9);
+    // vm.run_vm(program10);
+    vm.run_vm(program11);
     return 0;
 }
