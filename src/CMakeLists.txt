@@ -1,1 +1,1 @@
-add_library(DirectThreadingVM directthreading.cpp symbol.hpp)
+add_library(ThreadingVM directthreading.cpp symbol.hpp directthreading.cpp)

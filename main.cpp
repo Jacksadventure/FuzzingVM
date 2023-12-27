@@ -1,5 +1,6 @@
 #include <iostream>
 #include "src/directthreading.cpp"
+#include "src/indirectthreading.cpp"
 #include "src/symbol.hpp"
 uint32_t float_to_uint32(float value) {
     return *reinterpret_cast<uint32_t*>(&value);
@@ -34,16 +35,28 @@ int main() {
         DT_IMMI, 2,               
         DT_ADD,                  
         DT_RET};
-    // vm.run_vm(program1);
-    // vm.run_vm(program2);
-    // vm.run_vm(program3);
-    // vm.run_vm(program4);
-    // vm.run_vm(program5);
-    // vm.run_vm(program6);
-    // vm.run_vm(program7);
+    vm.run_vm(program1);
+    vm.run_vm(program2);
+    vm.run_vm(program3);
+    vm.run_vm(program4);
+    vm.run_vm(program5);
+    vm.run_vm(program6);
+    vm.run_vm(program7);
     // vm.run_vm(program8);
-    // vm.run_vm(program9);
+    vm.run_vm(program9);
     // vm.run_vm(program10);
     vm.run_vm(program11);
+    IndirectThreadingVM vm2;
+    vm2.run_vm(program1);
+    vm2.run_vm(program2);
+    vm2.run_vm(program3);
+    vm2.run_vm(program4);
+    vm2.run_vm(program5);
+    vm2.run_vm(program6);
+    vm2.run_vm(program7);
+    // vm2.run_vm(program8);
+    vm2.run_vm(program9);
+    // vm2.run_vm(program10);
+    vm2.run_vm(program11);
     return 0;
 }

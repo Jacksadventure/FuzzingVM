@@ -49,3 +49,7 @@ with open(file_path, 'w') as file:
 
 file_path
 
+# folders
+build/
+.vscode/
+main.dSYM/
