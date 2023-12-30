@@ -6,7 +6,7 @@
 uint32_t float_to_uint32(float value) {
     return *reinterpret_cast<uint32_t*>(&value);
 }
-
+//Direct Threading
 TEST(Arithmetic, HandlesAddition) {
     std::vector<unsigned> instructions = {DT_IMMI, 5, DT_IMMI, 3, DT_ADD, DT_SEEK, DT_END};
     DirectThreadingVM vm;
