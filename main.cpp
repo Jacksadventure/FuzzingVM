@@ -42,21 +42,24 @@ int main() {
     vm.run_vm(program5);
     vm.run_vm(program6);
     vm.run_vm(program7);
-    // vm.run_vm(program8);
+    vm.run_vm(program8);
     vm.run_vm(program9);
-    // vm.run_vm(program10);
+    vm.run_vm(program10);
     vm.run_vm(program11);
     IndirectThreadingVM vm2;
-    vm2.run_vm(program1);
-    vm2.run_vm(program2);
-    vm2.run_vm(program3);
-    vm2.run_vm(program4);
-    vm2.run_vm(program5);
-    vm2.run_vm(program6);
-    vm2.run_vm(program7);
+    //add 1+2; result =3; length =7 thread = 1-7 
+    // std::vector<unsigned> program2_1 = {DT_IMMI, 1, DT_IMMI, 2, DT_ADD, DT_PRINT, DT_END};
+    // std::vector<unsigned> thread2_1 = {0,2,4,5,6};
+    // vm2.run_vm(program2_1,thread2_1);
+    // vm2.run_vm(program2);
+    // vm2.run_vm(program3);
+    // vm2.run_vm(program4);
+    // vm2.run_vm(program5);
+    // vm2.run_vm(program6);
+    // vm2.run_vm(program7);
     // vm2.run_vm(program8);
-    vm2.run_vm(program9);
+    // vm2.run_vm(program9);
     // vm2.run_vm(program10);
-    vm2.run_vm(program11);
+    // vm2.run_vm(program11);
     return 0;
 }
