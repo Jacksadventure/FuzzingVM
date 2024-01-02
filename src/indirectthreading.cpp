@@ -135,6 +135,8 @@ private:
     void do_end() {
         st = std::stack<uint32_t>();
         instructions = std::vector<uint32_t>();
+        thread = std::vector<uint32_t>();
+        ip =0;
     }
 
     void do_lod() {

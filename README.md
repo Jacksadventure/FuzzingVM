@@ -1,6 +1,6 @@
-# Introduction to the DirectThreadingVM Instruction Set
+# Introduction to the ThreadingVM Instruction Set
 
-The `DirectThreadingVM` class is a virtual machine implementation that uses a direct threading approach to execute a set of predefined instructions. Each instruction performs a specific operation, ranging from arithmetic calculations to memory and flow control. This document introduces each instruction and its functionality within the DirectThreadingVM.
+The `ThreadingVM` class is a virtual machine implementation that uses a direct threading approach to execute a set of predefined instructions. Each instruction performs a specific operation, ranging from arithmetic calculations to memory and flow control. This document introduces each instruction and its functionality within the ThreadingVM.
 
 ## Arithmetic Instructions
 
@@ -46,10 +46,23 @@ The `DirectThreadingVM` class is a virtual machine implementation that uses a di
 - **DT_READ_FP**: Reads a floating-point number from standard input and pushes it onto the stack.(verified)
 
 ## How to Run
-
+- **For test**
 ```bash
 mkdir build
 cd build
-cmake ..
+cmake -Dtest=ON ..
 make 
 make test
+```
+- **For try it out in main.cpp**
+```bash
+mkdir build
+cd build
+cmake -Dbuild=ON ..
+make 
+./build/main
+```
+- **Useful tool for generate indirect threading code from direct threading code**
+```bash
+python3 generate_thread.py
+```

@@ -47,7 +47,6 @@ int main() {
     // // vm.run_vm(program10);
     // vm.run_vm(program11);
     IndirectThreadingVM vm2;
-    //Example: add 1+2; result =3; length =7 thread = 1-7 
     std::vector<unsigned> program2_1 = {DT_IMMI, 1, DT_IMMI, 2, DT_ADD, DT_PRINT, DT_END};
     std::vector<unsigned> thread2_1 = {0,2,4,5,6};
     vm2.run_vm(program2_1,thread2_1);
@@ -57,14 +56,14 @@ int main() {
     std::vector<unsigned> program2_3 = { DT_IMMI, 1, DT_IMMI, 2, DT_GT, DT_JZ, 7, DT_IMMI, 3, DT_IMMI, 4, DT_JMP, 9, DT_IMMI, 5, DT_IMMI, 6, DT_ADD, DT_PRINT, DT_END };
     std::vector<unsigned> thread2_3 = {0, 2, 4, 5, 7, 9, 11, 13, 15, 17, 18, 19};
     vm2.run_vm(program2_3,thread2_3);
-    // vm2.run_vm(program3);
-    // vm2.run_vm(program4);
-    // vm2.run_vm(program5);
-    // vm2.run_vm(program6);
-    // vm2.run_vm(program7);
-    // vm2.run_vm(program8);
-    // vm2.run_vm(program9);
-    // vm2.run_vm(program10);
-    // vm2.run_vm(program11);
+    std::vector<unsigned> program2_4 = { DT_IMMI, 2, DT_IMMI, 1, DT_GT, DT_JZ, 7, DT_IMMI, 3, DT_IMMI, 4, DT_JMP, 9, DT_IMMI, 5, DT_IMMI, 6, DT_ADD, DT_PRINT, DT_END };
+    std::vector<unsigned> thread2_4 = { 0, 2, 4, 5, 7, 9, 11, 13, 15, 17, 18, 19 };
+    vm2.run_vm(program2_4,thread2_4);
+    std::vector<unsigned> program2_5 = { DT_IMMI, 0, DT_STO_IMMI, 0, 1, DT_LOD, 0, DT_ADD, DT_LOD, 0, DT_INC, DT_STO, 0, DT_LOD, 0, DT_IMMI, 100, DT_GT, DT_JZ, 2, DT_PRINT, DT_END };
+    std::vector<unsigned> thread2_5 = { 0, 2, 5, 7, 8, 10, 11, 13, 15, 17, 18, 20, 21 };
+    vm2.run_vm(program2_5,thread2_5);
+    std::vector<unsigned> program2_6 = { DT_IMMI, 10, DT_CALL, 4, 1, DT_PRINT, DT_END, DT_IMMI, 2, DT_ADD, DT_RET };
+    std::vector<unsigned> thread2_6 = { 0, 2, 5, 6, 7, 9, 10 };
+    vm2.run_vm(program2_6,thread2_6);
     return 0;
 }
