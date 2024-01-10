@@ -62,7 +62,11 @@ cmake -Dbuild=ON ..
 make 
 ./build/main
 ```
-- **Useful tool for generate indirect threading code from direct threading code**
+- **Useful tool for generating indirect threading code from direct threading code**
 ```bash
 python3 generate_thread.py
+```
+- ** Tool for generating Token for Token threading **
+```bash
+python3 compiler.py
 ```
