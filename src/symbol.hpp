@@ -2,8 +2,8 @@
 #pragma once
 enum Instruction {
     // arithmetic 
-    DT_ADD, //tested
-    DT_SUB, //tested
+    DT_ADD, 
+    DT_SUB, 
     DT_MUL,
     DT_DIV,
     DT_SHL, 

@@ -1,5 +1,5 @@
-#ifndef INDIRECTTHREADING_H
-#define INDIRECTTHREADING_H
+#ifndef ROUTINETHREADING_H
+#define ROUTINETHREADING_H
 
 #include <vector>
 #include <stack>
@@ -14,12 +14,12 @@
 #endif
 #include "symbol.hpp"
 
-class IndirectThreadingVM {
+class RoutineThreadingVM {
 private:
     uint32_t ip; // Instruction pointer
-    std::vector<std::stack<uint32_t>> sts; // Stacks for operations
+    std::vector<std::stack<uint32_t> > sts; // Stacks for operations
     std::stack<uint32_t> st;
-    std::vector<uint32_t> instructions; // Instruction set
+    std::vector<std::vector<uint32_t> > instructions; // Instruction set
     char* buffer; // Memory buffer
     std::stack<uint32_t> callStack; // Call stack for function calls
     float to_float(uint32_t val) {
@@ -134,71 +134,56 @@ private:
 
     void do_end() {
         st = std::stack<uint32_t>();
-        instructions = std::vector<uint32_t>();
+        instructions = std::vector<std::vector<uint32_t> >();
         ip = 0;
     }
 
-    void do_lod() {
-        uint32_t offset = instructions[++ip];
+    void do_lod(uint32_t offset) {
         uint32_t a = read_mem32(buffer,offset);
         st.push(a);
     }
 
-    void do_sto() {
-        uint32_t offset = instructions[++ip];
+    void do_sto(uint32_t offset) {
         uint32_t a = st.top(); st.pop();
         write_mem32(buffer,a,offset);
     }
 
-    void do_immi() {
-        uint32_t a = instructions[++ip];
+    void do_immi(uint32_t a) {
         st.push(a);
     }
 
-    void do_memcpy() {
-        uint32_t dest = instructions[++ip];
-        uint32_t src = instructions[++ip];
-        uint32_t len = instructions[++ip];
+    void do_memcpy(uint32_t dest,uint32_t src,uint32_t len) {
+
         memcpy(buffer + dest, buffer + src, len);
     }
 
-    void do_memset() {
-        uint32_t dest = instructions[++ip];
-        uint32_t val = instructions[++ip];
-        uint32_t len = instructions[++ip];
+    void do_memset(uint32_t dest,uint32_t val,uint32_t len) {
         memset(buffer + dest, val, len);
     }
-    void do_sto_immi() {
-        uint32_t offset = instructions[++ip];
-        uint32_t number = instructions[++ip];
+    void do_sto_immi(uint32_t offset,uint32_t number) {
         write_mem32(buffer,number,offset);
     }
 
-    void do_jmp() {
-        uint32_t target = instructions[++ip];
+    void do_jmp(uint32_t target) {
         ip = target - 1;
     }
 
-    void do_jz() {
-        uint32_t target = instructions[++ip];
+    void do_jz(uint32_t target) {
         if (st.top() == 0) {
             ip = target - 1;
         }
         st.pop();
     }
 
-    void do_jump_if() {
+    void do_jump_if(uint32_t target) {
         uint32_t condition = st.top(); st.pop();
-        uint32_t target = instructions[++ip];
         if (condition) {
             ip = target - 1;
         }
     }
 
-    void do_if_else() {
+    void do_if_else(uint32_t trueBranch, uint32_t falseBranch) {
         uint32_t condition = st.top(); st.pop();
-        uint32_t trueBranch = instructions[++ip];
-        uint32_t falseBranch = instructions[++ip];
         ip = condition ? trueBranch - 1 : falseBranch - 1;
     }
     void do_gt() {
@@ -231,9 +216,7 @@ private:
         st.push(b <= a ? 1 : 0);
     }
 
-    void do_call() {
-        uint32_t target = instructions[++ip]; 
-        uint32_t num_params = instructions[++ip]; 
+    void do_call(uint32_t target, uint32_t num_params) {
         std::stack<uint32_t> newStack;
          for (uint32_t i = 0; i < num_params; ++i) {
             newStack.push(st.top());
@@ -279,15 +262,13 @@ private:
         }
     }
 
-    void do_read_fp() {
-        uint32_t offset = instructions[++ip];
+    void do_read_fp(uint32_t offset) {
         float val;
         std::cin >> val; 
         write_mem32(buffer,from_float(val), offset);
     }
 
-    void do_read_int() {
-        uint32_t offset = instructions[++ip];
+    void do_read_int(uint32_t offset) {
         int val;
         std::cin >> val;
         write_mem32(buffer, val, offset);
@@ -295,20 +276,20 @@ private:
 
 public:
     uint32_t debug_num;
-    IndirectThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) {
+    RoutineThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) {
         debug_num = 0xFFFFFFFF;
         sts.push_back(std::stack<uint32_t>());
         st = sts.back();
     }
 
-    ~IndirectThreadingVM() {
+    ~RoutineThreadingVM() {
         delete[] buffer;
     }
 
-    void run_vm(const std::vector<uint32_t>& ins) {
+    void run_vm(const std::vector<std::vector<uint32_t>>& ins) {
         instructions = ins;
         for (ip = 0; ip < instructions.size(); ip++) {
-            switch (instructions[ip]) {
+            switch (instructions[ip][0]) {
                 case DT_ADD:
                     do_add();
                     break;
@@ -343,13 +324,13 @@ public:
                     do_end();
                     break;
                 case DT_LOD:
-                    do_lod();
+                    do_lod(instructions[ip][1]);
                     break;
                 case DT_STO:
-                    do_sto();
+                    do_sto(instructions[ip][1]);
                     break;
                 case DT_IMMI:
-                    do_immi();
+                    do_immi(instructions[ip][1]);
                     break;
                 case DT_INC:
                     do_inc();
@@ -358,25 +339,25 @@ public:
                     do_dec();
                     break;
                 case DT_STO_IMMI:
-                    do_sto_immi();
+                    do_sto_immi(instructions[ip][1],instructions[ip][2]);
                     break;
                 case DT_MEMCPY:
-                    do_memcpy();
+                    do_memcpy(instructions[ip][1],instructions[ip][2],instructions[ip][3]);
                     break;
                 case DT_MEMSET:
-                    do_memset();
+                    do_memset(instructions[ip][1],instructions[ip][2],instructions[ip][3]);
                     break;
                 case DT_JMP:
-                    do_jmp();
+                    do_jmp(instructions[ip][1]);
                     break;
                 case DT_JZ:
-                    do_jz();
+                    do_jz(instructions[ip][1]);
                     break;
                 case DT_JUMP_IF:
-                    do_jump_if();
+                    do_jump_if(instructions[ip][1]);
                     break;
                 case DT_IF_ELSE:
-                    do_if_else();
+                    do_if_else(instructions[ip][1], instructions[ip][2]);
                     break;
                 case DT_GT:
                     do_gt();
@@ -394,7 +375,7 @@ public:
                     do_lt_eq();
                     break;
                 case DT_CALL:
-                    do_call();
+                    do_call(instructions[ip][1], instructions[ip][2]);
                     break;
                 case DT_RET:
                     do_ret();
@@ -406,16 +387,16 @@ public:
                     do_print();
                     break;
                 case DT_READ_INT:
-                    do_read_int();
+                    do_read_int(instructions[ip][1]);
                     break;
                 case DT_FP_PRINT:
                     do_print_fp();
                     break;
                 case DT_FP_READ:
-                    do_read_fp();
+                    do_read_fp(instructions[ip][1]);
                     break;
                 default:
-                std::cerr << "Error: Unknown instruction " << instructions[ip] << std::endl;
+                    std::cerr << "Error: Unknown subroutine "<< std::endl;
             }
         }
     }
@@ -434,4 +415,4 @@ public:
     }
 };
 
-#endif // INDIRECTTHREADING_H
+#endif 

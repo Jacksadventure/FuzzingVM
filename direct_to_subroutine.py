@@ -1,5 +1,3 @@
-import struct
-import re
 instruction_dict = {
     'DT_ADD': 0,
     'DT_SUB': 1,
@@ -39,21 +37,9 @@ instruction_dict = {
     'DT_SYSCALL': 35,
 }
 
-def binary(code_str):
-    items = code_str.split(',')
+def direct_to_subroutine(input_string):
+    items = input_string.split(',')
     items = [s.strip() for s in items]
-    byte_stream = bytearray()
-    
-    for item in items:
-        if item in instruction_dict:
-            byte_stream.extend(struct.pack('I', instruction_dict[item]))
-        elif "float_to_uint32" in item:
-            match = re.search(r"\((\d+\.\d+)\)", item)
-            byte_stream.extend(struct.pack('f', float(match.group(1))))
-        else:
-            byte_stream.extend(struct.pack('I', int(item)))
-    with open('program.bin', 'wb') as file:
-        file.write(byte_stream)
-
-code = "DT_IMMI,0,DT_STO_IMMI,0,1,DT_LOD,0,DT_ADD,DT_LOD,0,DT_INC,DT_STO,0,DT_LOD,0,DT_IMMI,100,DT_GT,DT_JZ,5,DT_PRINT,DT_END"
-binary(code)
+    for index, value in enumerate(items):
+        if value[0].isupper():
+            items[index] = str(instruction_dict[value])
