@@ -3,6 +3,7 @@
 #include "src/indirectthreading.cpp"
 #include "src/tokenthreading.cpp"
 #include "src/symbol.hpp"
+#include "src/routinethreading.cpp"
 uint32_t float_to_uint32(float value) {
     return *reinterpret_cast<uint32_t*>(&value);
 }
@@ -53,7 +54,11 @@ int main() {
     // vm2.run_vm(program2_1,thread2_1);
     // std::vector<unsigned> program2_2 = {DT_IMMI,100,DT_STO,128,DT_LOD,128,DT_PRINT,DT_END};
     // std::vector<unsigned> thread2_2 = {0,2,4,6,7};
-    TokenThreadingVM vm3;
-    vm3.run_vm("program.bin");
+    // TokenThreadingVM vm3;
+    // vm3.run_vm("program.bin");
+    RoutineThreadingVM vm4;
+    std::vector<std::vector<unsigned> > program4_1 = {{DT_IMMI, 0},{DT_STO_IMMI, 0, 1},{DT_LOD, 0},{DT_ADD},{DT_LOD, 0},{DT_INC},{DT_STO, 0},{DT_LOD, 0},{DT_IMMI, 100},{DT_GT},{DT_JZ, 2},{DT_PRINT},{DT_END}};
+    vm4.run_vm(program4_1);
     return 0;
 }
+

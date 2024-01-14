@@ -1,45 +1,44 @@
-instruction_dict = {
-    'DT_ADD': 0,
-    'DT_SUB': 1,
-    'DT_MUL': 2,
-    'DT_DIV': 3,
-    'DT_SHL': 4,
-    'DT_SHR': 5,
-    'DT_FP_ADD': 6,
-    'DT_FP_SUB': 7,
-    'DT_FP_MUL': 8,
-    'DT_FP_DIV': 9,
-    'DT_END': 10,
-    'DT_LOD': 11,
-    'DT_STO': 12,
-    'DT_IMMI': 13,
-    'DT_INC': 14,
-    'DT_DEC': 15,
-    'DT_STO_IMMI': 16,
-    'DT_MEMCPY': 17,
-    'DT_MEMSET': 18,
-    'DT_JMP': 19,
-    'DT_JZ': 20,
-    'DT_IF_ELSE': 21,
-    'DT_JUMP_IF': 22,
-    'DT_GT': 23,
-    'DT_LT': 24,
-    'DT_EQ': 25,
-    'DT_GT_EQ': 26,
-    'DT_LT_EQ': 27,
-    'DT_CALL': 28,
-    'DT_RET': 29,
-    'DT_SEEK': 30,
-    'DT_PRINT': 31,
-    'DT_READ_INT': 32,
-    'DT_FP_PRINT': 33,
-    'DT_FP_READ': 34,
-    'DT_SYSCALL': 35,
-}
+def d2s(input_string):
+    elements = input_string.split(',')
+    elements = [e.strip() for e in elements]
+    formatted_instructions = []
+    jump_instructions = ["DT_JMP", "DT_JZ", "DT_JMP_IF", "DT_CALL"]
+    special_jump_instruction = "DT_IF_ELSE"
+    address_map = {}
+    current_index = 0
+    for i, element in enumerate(elements):
+        if not element.isdigit(): 
+            address_map[i] = current_index
+            current_index += 1
+    i = 0
+    while i < len(elements):
+        element = elements[i]
+        if element in jump_instructions:
+            target_index = int(elements[i + 1])
+            new_target_index = address_map.get(target_index, target_index)
+            formatted_instructions.append(f"{{{element}, {new_target_index}}}")
+            i += 2 
+        elif element == special_jump_instruction:
+            first_target = int(elements[i + 1])
+            second_target = int(elements[i + 2])
+            new_first_target = address_map.get(first_target, first_target)
+            new_second_target = address_map.get(second_target, second_target)
+            formatted_instructions.append(f"{{{element}, {new_first_target}, {new_second_target}}}")
+            i += 3  
+        elif element.isdigit():
+            i += 1
+        else:
+            formatted_instruction = f"{{{element}"
+            while i < len(elements) - 1 and elements[i + 1].isdigit():
+                formatted_instruction += f", {elements[i + 1]}"
+                i += 1
+            formatted_instruction += "}"
+            formatted_instructions.append(formatted_instruction)
+            i += 1
 
-def direct_to_subroutine(input_string):
-    items = input_string.split(',')
-    items = [s.strip() for s in items]
-    for index, value in enumerate(items):
-        if value[0].isupper():
-            items[index] = str(instruction_dict[value])
+    return ','.join(formatted_instructions)
+
+input_string = "DT_IMMI,0,DT_STO_IMMI,0,1,DT_LOD,0,DT_ADD,DT_LOD,0,DT_INC,DT_STO,0,DT_LOD,0,DT_IMMI,100,DT_GT,DT_JZ,5,DT_SEEK,DT_END"
+print(d2s(input_string))
+
+

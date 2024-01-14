@@ -12,6 +12,7 @@ cmake-build*/
 *.o
 *.so
 *.a
+*.bin
 main
 # Makefile
 Makefile

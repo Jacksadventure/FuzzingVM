@@ -66,7 +66,7 @@ make
 ```bash
 python3 generate_thread.py
 ```
-- ** Tool for generating Token for Token threading **
+- **Tool for generating Token for Token threading**
 ```bash
 python3 compiler.py
 ```
