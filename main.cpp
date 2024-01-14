@@ -4,6 +4,7 @@
 #include "src/tokenthreading.cpp"
 #include "src/symbol.hpp"
 #include "src/routinethreading.cpp"
+#include "src/RPL.cpp"
 uint32_t float_to_uint32(float value) {
     return *reinterpret_cast<uint32_t*>(&value);
 }
@@ -56,9 +57,12 @@ int main() {
     // std::vector<unsigned> thread2_2 = {0,2,4,6,7};
     // TokenThreadingVM vm3;
     // vm3.run_vm("program.bin");
-    RoutineThreadingVM vm4;
-    std::vector<std::vector<unsigned> > program4_1 = {{DT_IMMI, 0},{DT_STO_IMMI, 0, 1},{DT_LOD, 0},{DT_ADD},{DT_LOD, 0},{DT_INC},{DT_STO, 0},{DT_LOD, 0},{DT_IMMI, 100},{DT_GT},{DT_JZ, 2},{DT_PRINT},{DT_END}};
-    vm4.run_vm(program4_1);
+    // RoutineThreadingVM vm4;
+    // std::vector<std::vector<unsigned> > program4_1 = {{DT_IMMI, 0},{DT_STO_IMMI, 0, 1},{DT_LOD, 0},{DT_ADD},{DT_LOD, 0},{DT_INC},{DT_STO, 0},{DT_LOD, 0},{DT_IMMI, 100},{DT_GT},{DT_JZ, 2},{DT_PRINT},{DT_END}};
+    // vm4.run_vm(program4_1);
+    // Example: 1 + 2 = 3
+    RPL rpl;
+    rpl.run_vm({"1","2","ADD","PRINT","END"});
     return 0;
 }
 
