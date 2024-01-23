@@ -8,7 +8,6 @@ def generateIndirectCode(input_string):
             li.append(index)
             dic[index] = len(li) - 1
     print("Thread: {", ", ".join(map(str, li)), "}")
-    print(dic)
     new_instruments = []
     for i in range(len(items)):
         if i >= 1 and items[i - 1] in ["DT_JMP", "DT_JZ", "DT_JMP_IF","DT_CALL"]:
@@ -21,10 +20,5 @@ def generateIndirectCode(input_string):
 
 
 
-input_string = """DT_IMMI, 10,              
-        DT_CALL, 7, 1,              
-        DT_SEEK, DT_END,          
-        DT_IMMI, 2,               
-        DT_ADD,                  
-        DT_RET"""
+input_string = "DT_IMMI,0,DT_STO_IMMI,0,1,DT_LOD,0,DT_ADD,DT_LOD,0,DT_INC,DT_STO,0,DT_LOD,0,DT_IMMI,100,DT_GT,DT_JZ,5,DT_SEEK,DT_END"
 result = generateIndirectCode(input_string)

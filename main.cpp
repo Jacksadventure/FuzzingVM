@@ -49,20 +49,22 @@ int main() {
     // vm.run_vm(program9);
     // // vm.run_vm(program10);
     // vm.run_vm(program11);
-    // IndirectThreadingVM vm2;
-    // std::vector<unsigned> program2_1 = {DT_IMMI, 1, DT_IMMI, 2, DT_ADD, DT_PRINT, DT_END};
-    // std::vector<unsigned> thread2_1 = {0,2,4,5,6};
-    // vm2.run_vm(program2_1,thread2_1);
-    // std::vector<unsigned> program2_2 = {DT_IMMI,100,DT_STO,128,DT_LOD,128,DT_PRINT,DT_END};
-    // std::vector<unsigned> thread2_2 = {0,2,4,6,7};
-    // TokenThreadingVM vm3;
-    // vm3.run_vm("program.bin");
-    // RoutineThreadingVM vm4;
-    // std::vector<std::vector<unsigned> > program4_1 = {{DT_IMMI, 0},{DT_STO_IMMI, 0, 1},{DT_LOD, 0},{DT_ADD},{DT_LOD, 0},{DT_INC},{DT_STO, 0},{DT_LOD, 0},{DT_IMMI, 100},{DT_GT},{DT_JZ, 2},{DT_PRINT},{DT_END}};
-    // vm4.run_vm(program4_1);
-    // Example: 1 + 2 = 3
-    RPL rpl;
-    rpl.run_vm({"1","2","ADD","PRINT","END"});
+    // // IndirectThreadingVM vm2;
+    // // std::vector<unsigned> program2_1 = {DT_IMMI, 1, DT_IMMI, 2, DT_ADD, DT_PRINT, DT_END};
+    // // std::vector<unsigned> thread2_1 = {0,2,4,5,6};
+    // // vm2.run_vm(program2_1,thread2_1);
+    // // std::vector<unsigned> program2_2 = {DT_IMMI,100,DT_STO,128,DT_LOD,128,DT_PRINT,DT_END};
+    // // std::vector<unsigned> thread2_2 = {0,2,4,6,7};
+    // // TokenThreadingVM vm3;
+    // // vm3.run_vm("program.bin");
+    // // RoutineThreadingVM vm4;
+    // // std::vector<std::vector<unsigned> > program4_1 = {{DT_IMMI, 0},{DT_STO_IMMI, 0, 1},{DT_LOD, 0},{DT_ADD},{DT_LOD, 0},{DT_INC},{DT_STO, 0},{DT_LOD, 0},{DT_IMMI, 100},{DT_GT},{DT_JZ, 2},{DT_PRINT},{DT_END}};
+    // // vm4.run_vm(program4_1);
+    // // Example: 1 + 2 = 3
+    // RPL rpl;
+    // // rpl.run_vm({"1","2","ADD","PRINT","END"});
+    IndirectThreadingVM vm2;
+    vm2.run("program.bin");
     return 0;
 }
 

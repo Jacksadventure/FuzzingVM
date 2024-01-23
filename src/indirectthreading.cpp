@@ -3,7 +3,10 @@
 #include <vector>
 #include <stack>
 #include <iostream>
-#include <unistd.h>   
+#include <unistd.h>
+#include <fstream>
+#include <map>
+#include <unordered_set>   
 #include <fcntl.h>    
 #include <sys/types.h> 
 #include <sys/stat.h>  
@@ -349,11 +352,147 @@ public:
         instructions = ins;
         thread = thd;
         for (ip = 0; ip < thread.size(); ip++) {
-            (this->*instructionTable[instructions[thd[ip]]])();
+            (this->*instructionTable[instructions[thread[ip]]])();
         }
     } 
     
-    static std::vector<uint32_t> convertToVMFormat(const std::string& input) {
+    void run_vm() {
+        for (ip = 0; ip < thread.size(); ip++) {
+            (this->*instructionTable[instructions[thread[ip]]])();
+        }
+    }
+
+    void run(const std::string& fileName){
+        std::ifstream file(fileName, std::ios::binary | std::ios::ate);
+        if (!file) {
+            throw std::runtime_error("Can't open file");
+        }
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        if (size % sizeof(uint32_t) != 0) {
+            throw std::runtime_error("The size of file is not a multiple of 4");
+        }
+        if (size == 0){
+            return;
+        }
+        std::vector<uint8_t> buffer(size);
+        if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+            throw std::runtime_error("Can't read file");
+        }
+        file.close();
+        std::vector<uint32_t> code(reinterpret_cast<uint32_t*>(buffer.data()), 
+                        reinterpret_cast<uint32_t*>(buffer.data() + size));
+        std::map<int,int> dic;
+        std::unordered_set<uint32_t> st;
+        uint32_t thread_count = 0;
+        uint32_t pointer_thd = 0;
+        do{
+            switch (code[pointer_thd])
+            {
+            case DT_LOD:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                break;
+            case DT_STO:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                break;
+            case DT_IMMI:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                break;
+            case DT_MEMCPY:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                break;
+            case DT_MEMSET:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                break;
+            case DT_STO_IMMI:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                break;
+            case DT_JMP:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                st.insert(pointer_thd+1);
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]);
+                break;
+            case DT_JZ:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                st.insert(pointer_thd+1);
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]); 
+                break;
+            case DT_IF_ELSE:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                st.insert(pointer_thd+1);
+                st.insert(pointer_thd+2);
+                instructions.push_back(code[pointer_thd++]); 
+                instructions.push_back(code[pointer_thd++]); 
+                instructions.push_back(code[pointer_thd++]); 
+                break;
+            case DT_JUMP_IF:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                st.insert(pointer_thd+1);
+                instructions.push_back(code[pointer_thd++]); 
+                instructions.push_back(code[pointer_thd++]); 
+            case DT_CALL:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                st.insert(pointer_thd+1);
+                instructions.push_back(code[pointer_thd++]); 
+                instructions.push_back(code[pointer_thd++]);
+                instructions.push_back(code[pointer_thd++]); 
+                break;
+            case DT_READ_INT:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]); 
+                instructions.push_back(code[pointer_thd++]); 
+                break;
+            case DT_FP_READ:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]); 
+                instructions.push_back(code[pointer_thd++]); 
+                break;
+            default:
+                thread.push_back(pointer_thd);
+                dic[pointer_thd] = thread_count++;
+                instructions.push_back(code[pointer_thd++]);
+                break;
+            }
+        } while(pointer_thd<code.size());
+
+        for (auto it = st.begin(); it != st.end(); ++it){
+            instructions[*it] = dic[instructions[*it]];
+        }
+        run_vm();
+    } 
+    std::vector<uint32_t> convertToVMFormat(const std::string& input) {
         std::vector<uint32_t> output;
         for (char c : input) {
             output.push_back(static_cast<uint32_t>(c));
