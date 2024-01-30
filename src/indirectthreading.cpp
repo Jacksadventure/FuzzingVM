@@ -10,6 +10,7 @@
 #include <fcntl.h>    
 #include <sys/types.h> 
 #include <sys/stat.h>  
+#include "readfile.hpp"
 #ifdef _WIN32
 #include <windows.h> // Windows-specific headers for file operations
 #endif
@@ -362,31 +363,13 @@ public:
         }
     }
 
-    void run(const std::string& fileName){
-        std::ifstream file(fileName, std::ios::binary | std::ios::ate);
-        if (!file) {
-            throw std::runtime_error("Can't open file");
-        }
-        std::streamsize size = file.tellg();
-        file.seekg(0, std::ios::beg);
-        if (size % sizeof(uint32_t) != 0) {
-            throw std::runtime_error("The size of file is not a multiple of 4");
-        }
-        if (size == 0){
-            return;
-        }
-        std::vector<uint8_t> buffer(size);
-        if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-            throw std::runtime_error("Can't read file");
-        }
-        file.close();
-        std::vector<uint32_t> code(reinterpret_cast<uint32_t*>(buffer.data()), 
-                        reinterpret_cast<uint32_t*>(buffer.data() + size));
+    void run_vm(const std::string& fileName){
+        std::vector<uint32_t> code = readFileToUint32Array(fileName);
         std::map<int,int> dic;
         std::unordered_set<uint32_t> st;
         uint32_t thread_count = 0;
         uint32_t pointer_thd = 0;
-        do{
+        while(pointer_thd<code.size()){
             switch (code[pointer_thd])
             {
             case DT_LOD:
@@ -485,7 +468,7 @@ public:
                 instructions.push_back(code[pointer_thd++]);
                 break;
             }
-        } while(pointer_thd<code.size());
+        }
 
         for (auto it = st.begin(); it != st.end(); ++it){
             instructions[*it] = dic[instructions[*it]];

@@ -9,10 +9,21 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <map>
+#include <unordered_set>   
+#include "readfile.hpp"
 #ifdef _WIN32
 #include <windows.h>
 #endif
 #include "symbol.hpp"
+
+struct pair_hash {
+    size_t operator()(const std::pair<uint32_t, uint32_t>& p) const {
+        auto hash1 = std::hash<uint32_t>{}(p.first);
+        auto hash2 = std::hash<uint32_t>{}(p.second);
+        return hash1 ^ hash2; // 组合两个哈希值
+    }
+};
 
 class RoutineThreadingVM {
 private:
@@ -284,6 +295,56 @@ public:
 
     ~RoutineThreadingVM() {
         delete[] buffer;
+    }
+    
+    void run_vm(const std::string& fileName){
+        std::vector<uint32_t> code = readFileToUint32Array(fileName);
+        std::map<int, int> addressMap;  
+        std::vector<std::vector<uint32_t>> instructions;
+        uint32_t pointer = 0;  
+        uint32_t instructionIndex = 0;  
+        while(pointer < code.size()){
+            uint32_t instructionStart = pointer;
+            std::vector<uint32_t> instruction;  
+            instruction.push_back(code[pointer++]);
+            switch (instruction[0]) {
+                case DT_LOD:
+                case DT_STO:
+                case DT_IMMI:
+                case DT_READ_INT:
+                case DT_FP_READ:
+                case DT_JMP:
+                case DT_JZ:
+                case DT_JUMP_IF:
+                    instruction.push_back(code[pointer++]);
+                    break;
+                case DT_MEMCPY:
+                case DT_MEMSET:
+                case DT_STO_IMMI:
+                case DT_IF_ELSE:
+                case DT_CALL:
+                    instruction.push_back(code[pointer++]);
+                    instruction.push_back(code[pointer++]);
+                    break;
+            }
+
+            instructions.push_back(instruction);
+            addressMap[instructionStart] = instructionIndex++;
+        }
+        for (auto &instruction : instructions) {
+            switch (instruction[0]) {
+                case DT_JMP:
+                case DT_JZ:
+                case DT_JUMP_IF:
+                case DT_IF_ELSE:
+                case DT_CALL:
+                    if (instruction.size() > 1) {
+                        instruction[1] = addressMap[instruction[1]];
+                    }
+                    break;
+            }
+        }
+        run_vm(instructions);
     }
 
     void run_vm(const std::vector<std::vector<uint32_t>>& ins) {

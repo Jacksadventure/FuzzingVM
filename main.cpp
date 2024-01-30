@@ -1,10 +1,10 @@
 #include <iostream>
 #include "src/directthreading.cpp"
 #include "src/indirectthreading.cpp"
-#include "src/tokenthreading.cpp"
 #include "src/symbol.hpp"
 #include "src/routinethreading.cpp"
 #include "src/RPL.cpp"
+#include "src/readfile.cpp"
 uint32_t float_to_uint32(float value) {
     return *reinterpret_cast<uint32_t*>(&value);
 }
@@ -63,8 +63,8 @@ int main() {
     // // Example: 1 + 2 = 3
     // RPL rpl;
     // // rpl.run_vm({"1","2","ADD","PRINT","END"});
-    IndirectThreadingVM vm2;
-    vm2.run("program.bin");
+    RoutineThreadingVM vm2;
+    vm2.run_vm("program.bin");
     return 0;
 }
 
