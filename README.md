@@ -58,9 +58,8 @@ make test
 ```bash
 mkdir build
 cd build
-cmake -Dbuild=ON ..
+cmake -Dbuild=ON -DIMPELETATION=ALL ..
 make 
-./build/main
 ```
 - **Useful tool for generating indirect threading code from direct threading code**
 ```bash
