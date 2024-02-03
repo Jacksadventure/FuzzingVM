@@ -10,17 +10,18 @@
 #include <sys/stat.h>
 #include "symbol.hpp"
 #include "readfile.hpp"
+#include "interface.hpp"
 #ifdef _WIN32
 #include <windows.h> // Windows-specific headers for file operations
 #endif
 
-class TokenThreadingVM  {
+class DirectThreadingVM : public Interface {
     uint32_t ip; // Instruction pointer
     std::vector<std::stack<uint32_t>> sts; // Stack for operations
     std::stack<uint32_t> st;
     std::vector<uint32_t> instructions; // Instruction set
     char* buffer; // Memory buffer
-    void (TokenThreadingVM::*instructionTable[256])(void); // Function pointer table for instructions
+    void (DirectThreadingVM::*instructionTable[256])(void); // Function pointer table for instructions
     std::stack<uint32_t> callStack; // Call stack for function calls
     float to_float(uint32_t val) {
         return *reinterpret_cast<float*>(&val);
@@ -294,57 +295,57 @@ class TokenThreadingVM  {
     }
 
     void init_instruction_table() {
-        instructionTable[DT_ADD] = &TokenThreadingVM::do_add;
-        instructionTable[DT_SUB] = &TokenThreadingVM::do_sub;
-        instructionTable[DT_MUL] = &TokenThreadingVM::do_mul;
-        instructionTable[DT_DIV] = &TokenThreadingVM::do_div;
-        instructionTable[DT_SHL] = &TokenThreadingVM::do_shl;
-        instructionTable[DT_SHR] = &TokenThreadingVM::do_shr;
-        instructionTable[DT_FP_ADD] = &TokenThreadingVM::do_fp_add;
-        instructionTable[DT_FP_SUB] = &TokenThreadingVM::do_fp_sub;
-        instructionTable[DT_FP_MUL] = &TokenThreadingVM::do_fp_mul;
-        instructionTable[DT_FP_DIV] = &TokenThreadingVM::do_fp_div;
-        instructionTable[DT_END] = &TokenThreadingVM::do_end;
-        instructionTable[DT_LOD] = &TokenThreadingVM::do_lod;
-        instructionTable[DT_STO] = &TokenThreadingVM::do_sto;
-        instructionTable[DT_IMMI] = &TokenThreadingVM::do_immi;
-        instructionTable[DT_STO_IMMI] = &TokenThreadingVM::do_sto_immi;
-        instructionTable[DT_MEMCPY] = &TokenThreadingVM::do_memcpy;
-        instructionTable[DT_MEMSET] = &TokenThreadingVM::do_memset;
-        instructionTable[DT_INC] = &TokenThreadingVM::do_inc;
-        instructionTable[DT_DEC] = &TokenThreadingVM::do_dec;
-        instructionTable[DT_JMP] = &TokenThreadingVM::do_jmp;
-        instructionTable[DT_JZ] = &TokenThreadingVM::do_jz;
-        instructionTable[DT_IF_ELSE] = &TokenThreadingVM::do_if_else;
-        instructionTable[DT_JUMP_IF] = &TokenThreadingVM::do_jump_if;
-        instructionTable[DT_GT] = &TokenThreadingVM::do_gt;
-        instructionTable[DT_LT] = &TokenThreadingVM::do_lt;
-        instructionTable[DT_EQ] = &TokenThreadingVM::do_eq;
-        instructionTable[DT_GT_EQ] = &TokenThreadingVM::do_gt_eq;
-        instructionTable[DT_LT_EQ] = &TokenThreadingVM::do_lt_eq;
-        instructionTable[DT_CALL] = &TokenThreadingVM::do_call;
-        instructionTable[DT_RET] = &TokenThreadingVM::do_ret;
-        instructionTable[DT_SEEK] = &TokenThreadingVM::do_seek;
-        instructionTable[DT_PRINT] = &TokenThreadingVM::do_print;
-        instructionTable[DT_READ_INT] = &TokenThreadingVM::do_read_int;
-        instructionTable[DT_FP_PRINT] = &TokenThreadingVM::do_print_fp;
-        instructionTable[DT_FP_READ] = &TokenThreadingVM::do_read_fp;
+        instructionTable[DT_ADD] = &DirectThreadingVM::do_add;
+        instructionTable[DT_SUB] = &DirectThreadingVM::do_sub;
+        instructionTable[DT_MUL] = &DirectThreadingVM::do_mul;
+        instructionTable[DT_DIV] = &DirectThreadingVM::do_div;
+        instructionTable[DT_SHL] = &DirectThreadingVM::do_shl;
+        instructionTable[DT_SHR] = &DirectThreadingVM::do_shr;
+        instructionTable[DT_FP_ADD] = &DirectThreadingVM::do_fp_add;
+        instructionTable[DT_FP_SUB] = &DirectThreadingVM::do_fp_sub;
+        instructionTable[DT_FP_MUL] = &DirectThreadingVM::do_fp_mul;
+        instructionTable[DT_FP_DIV] = &DirectThreadingVM::do_fp_div;
+        instructionTable[DT_END] = &DirectThreadingVM::do_end;
+        instructionTable[DT_LOD] = &DirectThreadingVM::do_lod;
+        instructionTable[DT_STO] = &DirectThreadingVM::do_sto;
+        instructionTable[DT_IMMI] = &DirectThreadingVM::do_immi;
+        instructionTable[DT_STO_IMMI] = &DirectThreadingVM::do_sto_immi;
+        instructionTable[DT_MEMCPY] = &DirectThreadingVM::do_memcpy;
+        instructionTable[DT_MEMSET] = &DirectThreadingVM::do_memset;
+        instructionTable[DT_INC] = &DirectThreadingVM::do_inc;
+        instructionTable[DT_DEC] = &DirectThreadingVM::do_dec;
+        instructionTable[DT_JMP] = &DirectThreadingVM::do_jmp;
+        instructionTable[DT_JZ] = &DirectThreadingVM::do_jz;
+        instructionTable[DT_IF_ELSE] = &DirectThreadingVM::do_if_else;
+        instructionTable[DT_JUMP_IF] = &DirectThreadingVM::do_jump_if;
+        instructionTable[DT_GT] = &DirectThreadingVM::do_gt;
+        instructionTable[DT_LT] = &DirectThreadingVM::do_lt;
+        instructionTable[DT_EQ] = &DirectThreadingVM::do_eq;
+        instructionTable[DT_GT_EQ] = &DirectThreadingVM::do_gt_eq;
+        instructionTable[DT_LT_EQ] = &DirectThreadingVM::do_lt_eq;
+        instructionTable[DT_CALL] = &DirectThreadingVM::do_call;
+        instructionTable[DT_RET] = &DirectThreadingVM::do_ret;
+        instructionTable[DT_SEEK] = &DirectThreadingVM::do_seek;
+        instructionTable[DT_PRINT] = &DirectThreadingVM::do_print;
+        instructionTable[DT_READ_INT] = &DirectThreadingVM::do_read_int;
+        instructionTable[DT_FP_PRINT] = &DirectThreadingVM::do_print_fp;
+        instructionTable[DT_FP_READ] = &DirectThreadingVM::do_read_fp;
     }
 
 public:
     uint32_t debug_num;
-    TokenThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) { 
+    DirectThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) { 
         init_instruction_table();
         debug_num = 0xFFFFFFFF;
         sts.push_back(std::stack<uint32_t>());
         st = sts.back();
     }
 
-    ~TokenThreadingVM() {
+    ~DirectThreadingVM() {
         delete[] buffer;
     }
 
-    void run_vm(std::string filename) {
+    void run_vm(std::string filename) override{
         try {
             instructions = readFileToUint32Array(filename);
             for (ip = 0; ip < instructions.size(); ip++) {

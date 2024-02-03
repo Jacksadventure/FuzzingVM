@@ -55,5 +55,4 @@ def binary(code_str):
     with open('program.bin', 'wb') as file:
         file.write(byte_stream)
 
-code = "DT_IMMI,0,DT_STO_IMMI,0,1,DT_LOD,0,DT_ADD,DT_LOD,0,DT_INC,DT_STO,0,DT_LOD,0,DT_IMMI,100,DT_GT,DT_JZ,5,DT_PRINT,DT_END"
-binary(code)
+

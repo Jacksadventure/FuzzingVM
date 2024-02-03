@@ -15,7 +15,8 @@
 #include <windows.h> // Windows-specific headers for file operations
 #endif
 #include "symbol.hpp"
-class IndirectThreadingVM {
+#include "interface.hpp"
+class IndirectThreadingVM : public Interface{
 private:
     uint32_t ip; // Instruction pointer
     std::vector<std::stack<uint32_t>> sts; // Stack for operations
@@ -363,8 +364,8 @@ public:
         }
     }
 
-    void run_vm(const std::string& fileName){
-        std::vector<uint32_t> code = readFileToUint32Array(fileName);
+    void run_vm(std::string filename) override{
+        std::vector<uint32_t> code = readFileToUint32Array(filename);
         std::map<int,int> dic;
         std::unordered_set<uint32_t> st;
         uint32_t thread_count = 0;

@@ -12,6 +12,7 @@
 #include <map>
 #include <unordered_set>   
 #include "readfile.hpp"
+#include "interface.hpp"
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -25,7 +26,7 @@ struct pair_hash {
     }
 };
 
-class RoutineThreadingVM {
+class RoutineThreadingVM :public Interface{
 private:
     uint32_t ip; // Instruction pointer
     std::vector<std::stack<uint32_t> > sts; // Stacks for operations
@@ -297,8 +298,8 @@ public:
         delete[] buffer;
     }
     
-    void run_vm(const std::string& fileName){
-        std::vector<uint32_t> code = readFileToUint32Array(fileName);
+    void run_vm(std::string filename) override {
+        std::vector<uint32_t> code = readFileToUint32Array(filename);
         std::map<int, int> addressMap;  
         std::vector<std::vector<uint32_t>> instructions;
         uint32_t pointer = 0;  
@@ -336,10 +337,15 @@ public:
                 case DT_JMP:
                 case DT_JZ:
                 case DT_JUMP_IF:
-                case DT_IF_ELSE:
                 case DT_CALL:
                     if (instruction.size() > 1) {
                         instruction[1] = addressMap[instruction[1]];
+                    }
+                    break;
+                case DT_IF_ELSE:
+                    if (instruction.size() > 2) {
+                        instruction[1] = addressMap[instruction[1]];
+                        instruction[2] = addressMap[instruction[2]];
                     }
                     break;
             }
