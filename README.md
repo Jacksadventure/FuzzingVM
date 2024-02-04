@@ -54,12 +54,12 @@ cmake -Dtest=ON ..
 make 
 make test
 ```
-- **For try it out in main.cpp**
+- **For try it out(-DIMPELETATION choice direct indirect routine ALL)**
 ```bash
 mkdir build
 cd build
 cmake -Dbuild=ON -DIMPELETATION=ALL ..
-make 
+make
 ```
 - **Useful tool for generating indirect threading code from direct threading code**
 ```bash

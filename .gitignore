@@ -29,7 +29,7 @@ Makefile
 # Data files
 *.dat
 *.out
-
+__pycache__/
 # Dependencies
 /vendor/
 /external/
