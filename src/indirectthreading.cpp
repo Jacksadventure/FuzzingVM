@@ -148,7 +148,7 @@ private:
         uint32_t offset = instructions[thread[ip]+1];
         uint32_t a = read_mem32(buffer,offset);
         st.push(a);
-    }
+    } 
 
     void do_sto() {
         uint32_t offset = instructions[thread[ip]+1];
