@@ -22,9 +22,9 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
 # Create the test executable
-add_executable(ThreadingVMTest ThreadingVMTest.cpp)
+add_executable(ThreadingVMTest ThreadingVMTest.cpp ../src/readfile.cpp)
 
 # Link the test executable with the GoogleTest libraries and your VM library
-target_link_libraries(ThreadingVMTest gtest gtest_main ThreadingVM)
+target_link_libraries(ThreadingVMTest gtest gtest_main)
 include(GoogleTest)
 gtest_discover_tests(ThreadingVMTest)

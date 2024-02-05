@@ -356,7 +356,8 @@ public:
         }
     }
 
-    void run_vm(std::vector<uint32_t> instructions) {
+    void run_vm(std::vector<uint32_t>& code) {
+        this->instructions = code;
         try {
             for (ip = 0; ip < instructions.size(); ip++) {
                 (this->*instructionTable[instructions[ip]])();

@@ -9,9 +9,9 @@ uint32_t float_to_uint32(float value) {
     return *reinterpret_cast<uint32_t*>(&value);
 }
 int main() {
-    // DirectThreadingVM vm;
-    // // Example program 1: Add 1 and 2, result = 3
-    // std::vector<unsigned> program1 = {DT_IMMI, 1, DT_IMMI, 2, DT_ADD, DT_PRINT, DT_END};
+    DirectThreadingVM vm;
+    // // Example program 1: Add 5 and 3, result = 8
+    std::vector<unsigned> program1 = {DT_IMMI, 5, DT_IMMI, 3, DT_ADD, DT_SEEK, DT_END};
     // // Example program 2: Store and Load data in specific memory address, result = 100
     // std::vector<unsigned> program2 = {DT_IMMI,100,DT_STO,128,DT_LOD,128,DT_PRINT,DT_END};
     // // Example program 3: Number comparision(get two number a,b caculate a>b? c+d:e+f;eg.a = 1 b = 2 c=3 d=4 e=5 f=6,result = 11)
@@ -38,7 +38,7 @@ int main() {
     //     DT_IMMI, 2,               
     //     DT_ADD,                  
     //     DT_RET};
-    // vm.run_vm(program1);
+    vm.run_vm(program1);
     // vm.run_vm(program2);
     // vm.run_vm(program3);
     // vm.run_vm(program4);
@@ -63,8 +63,8 @@ int main() {
     // // Example: 1 + 2 = 3
     // RPL rpl;
     // // rpl.run_vm({"1","2","ADD","PRINT","END"});
-    RoutineThreadingVM vm2;
-    vm2.run_vm("program.bin");
+    // RoutineThreadingVM vm2;
+    // vm2.run_vm("program.bin");
     return 0;
 }
 
