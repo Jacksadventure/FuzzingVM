@@ -364,7 +364,7 @@ public:
         }
     }
 
-    void run_vm(std::string filename) override{
+    void run_vm(std::string filename,bool benchmarkMode){
         std::vector<uint32_t> code = readFileToUint32Array(filename);
         std::map<int,int> dic;
         std::unordered_set<uint32_t> st;
@@ -473,6 +473,9 @@ public:
 
         for (auto it = st.begin(); it != st.end(); ++it){
             instructions[*it] = dic[instructions[*it]];
+        }
+        if (benchmarkMode) {
+            std::cout << "Preprocessing completed, starting benchmark..." << std::endl;
         }
         run_vm();
     } 

@@ -298,7 +298,7 @@ public:
         delete[] buffer;
     }
     
-    void run_vm(std::string filename) override {
+    void run_vm(std::string filename,bool benchmarkMode){
         std::vector<uint32_t> code = readFileToUint32Array(filename);
         std::map<int, int> addressMap;  
         std::vector<std::vector<uint32_t>> instructions;
@@ -349,6 +349,9 @@ public:
                     }
                     break;
             }
+        }
+        if (benchmarkMode) {
+            std::cout << "Preprocessing completed, starting benchmark..." << std::endl;
         }
         run_vm(instructions);
     }

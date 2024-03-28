@@ -11,8 +11,19 @@
 #include <memory>
 #include <iostream>
 int main(int argc, char* argv[]){
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+    bool isBenchmark = false;
+    std::string filename;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--benchmark" && i + 1 < argc) {
+            isBenchmark = true;
+            filename = argv[++i];
+        } else if (filename.empty()) {
+            filename = arg;
+        }
+    }
+    if (filename.empty()) {
+        std::cerr << "Usage: " << argv[0] << " [--benchmark] <filename>" << std::endl;
         return 1;
     }
     std::unique_ptr<Interface> vm;
@@ -27,6 +38,6 @@ int main(int argc, char* argv[]){
         std::cerr << "Virtual machine implementation not initialized." << std::endl;
         return 1;
     }
-    vm->run_vm(std::string(argv[1]));
+    vm->run_vm(filename,isBenchmark);
     return 0;
 }

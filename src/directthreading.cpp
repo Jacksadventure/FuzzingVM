@@ -23,53 +23,53 @@ class DirectThreadingVM : public Interface {
     char* buffer; // Memory buffer
     void (DirectThreadingVM::*instructionTable[256])(void); // Function pointer table for instructions
     std::stack<uint32_t> callStack; // Call stack for function calls
-    float to_float(uint32_t val) {
+    inline float to_float(uint32_t val) {
         return *reinterpret_cast<float*>(&val);
     }
 
-    uint32_t from_float(float val) {
+    inline uint32_t from_float(float val) {
         return *reinterpret_cast<uint32_t*>(&val);
     }
 
-    void write_memory(char* buffer,uint32_t* src, uint32_t offset, uint32_t size) {
+    inline void write_memory(char* buffer,uint32_t* src, uint32_t offset, uint32_t size) {
         memcpy(buffer + offset, src, size);
     }
 
-    void write_mem32(char* buffer, uint32_t val, uint32_t offset) {
+    inline void write_mem32(char* buffer, uint32_t val, uint32_t offset) {
         uint32_t buf[1];
         buf[0] = val;
         write_memory(buffer, (uint32_t *)buf, offset, 4);
     }
 
-    void read_memory(char* buffer, uint8_t* dst, uint32_t offset, uint32_t size) {
+    inline void read_memory(char* buffer, uint8_t* dst, uint32_t offset, uint32_t size) {
         memcpy(dst, buffer + offset, size);
     }
 
-    uint32_t read_mem32(char* buffer, uint32_t offset) {
+    inline uint32_t read_mem32(char* buffer, uint32_t offset) {
         uint32_t buf[1];
         read_memory(buffer, (uint8_t *)buf, offset, 4);
         return buf[0];
     }
     // Define operations for each instruction
-    void do_add() {
+    inline void do_add() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(a + b);
     }
 
-    void do_sub() {
+    inline void do_sub() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b - a);
     }
 
-    void do_mul() {
+    inline void do_mul() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(a * b);
     }
 
-    void do_div() {
+    inline void do_div() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         if (b == 0) {
@@ -79,28 +79,28 @@ class DirectThreadingVM : public Interface {
         st.push(b / a);
     }
 
-    void do_fp_add() {
+    inline void do_fp_add() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
         float result = a + b;
         st.push(from_float(result));
     }
 
-    void do_fp_sub() {
+    inline void do_fp_sub() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
         float result = b - a;
         st.push(from_float(result));
     }
 
-    void do_fp_mul() {
+    inline void do_fp_mul() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
         float result = a * b;
         st.push(from_float(result));
     }
 
-    void do_fp_div() {
+    inline void do_fp_div() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
         if (b == 0.0f) {
@@ -111,76 +111,76 @@ class DirectThreadingVM : public Interface {
         st.push(from_float(result));
     }
 
-    void do_inc() {
+    inline void do_inc() {
         uint32_t a = st.top(); st.pop();
         st.push(++a);
     }
 
-    void do_dec() {
+    inline void do_dec() {
         uint32_t a = st.top(); st.pop();
         st.push(--a);
     }
 
-    void do_shl() {
+    inline void do_shl() {
         uint32_t shift = st.top(); st.pop();
         uint32_t value = st.top(); st.pop();
         st.push(value << shift);
     }
 
-    void do_shr() {
+    inline void do_shr() {
         uint32_t shift = st.top(); st.pop();
         uint32_t value = st.top(); st.pop();
         st.push(value >> shift);
     }
 
-    void do_end() {
+    inline void do_end() {
         st = std::stack<uint32_t>();
         instructions = std::vector<uint32_t>();
         ip = 0;
     }
 
-    void do_lod() {
+    inline void do_lod() {
         uint32_t offset = instructions[++ip];
         uint32_t a = read_mem32(buffer,offset);
         st.push(a);
     }
 
-    void do_sto() {
+    inline void do_sto() {
         uint32_t offset = instructions[++ip];
         uint32_t a = st.top(); st.pop();
         write_mem32(buffer,a,offset);
     }
 
-    void do_immi() {
+    inline void do_immi() {
         uint32_t a = instructions[++ip];
         st.push(a);
     }
 
-    void do_memcpy() {
+    inline void do_memcpy() {
         uint32_t dest = instructions[++ip];
         uint32_t src = instructions[++ip];
         uint32_t len = instructions[++ip];
         memcpy(buffer + dest, buffer + src, len);
     }
 
-    void do_memset() {
+    inline void do_memset() {
         uint32_t dest = instructions[++ip];
         uint32_t val = instructions[++ip];
         uint32_t len = instructions[++ip];
         memset(buffer + dest, val, len);
     }
-    void do_sto_immi() {
+    inline void do_sto_immi() {
         uint32_t offset = instructions[++ip];
         uint32_t number = instructions[++ip];
         write_mem32(buffer,number,offset);
     }
 
-    void do_jmp() {
+    inline void do_jmp() {
         uint32_t target = instructions[++ip];
         ip = target - 1;
     }
 
-    void do_jz() {
+    inline void do_jz() {
         uint32_t target = instructions[++ip];
         if (st.top() == 0) {
             ip = target - 1;
@@ -188,7 +188,7 @@ class DirectThreadingVM : public Interface {
         st.pop();
     }
 
-    void do_jump_if() {
+    inline void do_jump_if() {
         uint32_t condition = st.top(); st.pop();
         uint32_t target = instructions[++ip];
         if (condition) {
@@ -196,43 +196,44 @@ class DirectThreadingVM : public Interface {
         }
     }
 
-    void do_if_else() {
+    inline void do_if_else() {
         uint32_t condition = st.top(); st.pop();
         uint32_t trueBranch = instructions[++ip];
         uint32_t falseBranch = instructions[++ip];
         ip = condition ? trueBranch - 1 : falseBranch - 1;
     }
-    void do_gt() {
+
+    inline void do_gt() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b > a ? 1 : 0);
     }
 
-    void do_lt() {
+    inline void do_lt() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b < a ? 1 : 0);
     }
 
-    void do_eq() {
+    inline void do_eq() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b == a ? 1 : 0);
     }
 
-    void do_gt_eq() {
+    inline void do_gt_eq() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b >= a ? 1 : 0);
     }
 
-    void do_lt_eq() {
+    inline void do_lt_eq() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b <= a ? 1 : 0);
     }
 
-    void do_call() {
+    inline void do_call() {
         uint32_t target = instructions[++ip]; 
         uint32_t num_params = instructions[++ip]; 
         std::stack<uint32_t> newStack;
@@ -246,7 +247,7 @@ class DirectThreadingVM : public Interface {
         ip = target - 1; 
     }
 
-    void do_ret() {
+    inline void do_ret() {
         if (callStack.empty()) {
             std::cerr << "Error: Call stack underflow" << std::endl;
             return;
@@ -258,11 +259,11 @@ class DirectThreadingVM : public Interface {
         st.push(return_value);
     }
 
-    void do_seek() {
+    inline void do_seek() {
         debug_num = st.top();
     }
 
-    void do_print() {
+    inline void do_print() {
         if (!st.empty()) {
             std::cout <<(int)st.top() << std::endl;
         } else {
@@ -270,7 +271,7 @@ class DirectThreadingVM : public Interface {
         }
     }
 
-    void do_print_fp() {
+    inline void do_print_fp() {
         if (!st.empty()) {
             uint32_t num = st.top();
             float* floatPtr = (float*)&num;
@@ -280,14 +281,14 @@ class DirectThreadingVM : public Interface {
         }
     }
 
-    void do_read_fp() {
+    inline void do_read_fp() {
         uint32_t offset = instructions[++ip];
         float val;
         std::cin >> val; 
         write_mem32(buffer,from_float(val), offset);
     }
 
-    void do_read_int() {
+    inline void do_read_int() {
         uint32_t offset = instructions[++ip];
         int val;
         std::cin >> val;
@@ -345,9 +346,12 @@ public:
         delete[] buffer;
     }
 
-    void run_vm(std::string filename) override{
+    void run_vm(std::string filename, bool benchmarkMode) {
         try {
             instructions = readFileToUint32Array(filename);
+            if (benchmarkMode) {
+                std::cout << "Preprocessing completed, starting benchmark..." << std::endl;
+            }
             for (ip = 0; ip < instructions.size(); ip++) {
                 (this->*instructionTable[instructions[ip]])();
             }
