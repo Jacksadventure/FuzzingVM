@@ -295,6 +295,10 @@ class DirectThreadingVM : public Interface {
         write_mem32(buffer, val, offset);
     }
 
+    inline void tik(){
+        std::cout<<"tik"<<std::endl;
+    }
+
     void init_instruction_table() {
         instructionTable[DT_ADD] = &DirectThreadingVM::do_add;
         instructionTable[DT_SUB] = &DirectThreadingVM::do_sub;
@@ -331,6 +335,7 @@ class DirectThreadingVM : public Interface {
         instructionTable[DT_READ_INT] = &DirectThreadingVM::do_read_int;
         instructionTable[DT_FP_PRINT] = &DirectThreadingVM::do_print_fp;
         instructionTable[DT_FP_READ] = &DirectThreadingVM::do_read_fp;
+        instructionTable[DT_Tik] = &DirectThreadingVM::tik;
     }
 
 public:

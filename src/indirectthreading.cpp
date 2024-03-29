@@ -55,25 +55,25 @@ private:
         return buf[0];
     }
     // Define operations for each instruction
-    void do_add() {
+    inline void do_add() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(a + b);
     }
 
-    void do_sub() {
+    inline void do_sub() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b - a);
     }
 
-    void do_mul() {
+    inline void do_mul() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(a * b);
     }
 
-    void do_div() {
+    inline void do_div() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         if (b == 0) {
@@ -83,28 +83,28 @@ private:
         st.push(b / a);
     }
 
-    void do_fp_add() {
+    inline void do_fp_add() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
         float result = a + b;
         st.push(from_float(result));
     }
 
-    void do_fp_sub() {
+    inline void do_fp_sub() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
         float result = b - a;
         st.push(from_float(result));
     }
 
-    void do_fp_mul() {
+    inline void do_fp_mul() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
         float result = a * b;
         st.push(from_float(result));
     }
 
-    void do_fp_div() {
+    inline void do_fp_div() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
         if (b == 0.0f) {
@@ -115,77 +115,77 @@ private:
         st.push(from_float(result));
     }
 
-    void do_inc() {
+    inline void do_inc() {
         uint32_t a = st.top(); st.pop();
         st.push(++a);
     }
 
-    void do_dec() {
+    inline void do_dec() {
         uint32_t a = st.top(); st.pop();
         st.push(--a);
     }
 
-    void do_shl() {
+    inline void do_shl() {
         uint32_t shift = st.top(); st.pop();
         uint32_t value = st.top(); st.pop();
         st.push(value << shift);
     }
 
-    void do_shr() {
+    inline void do_shr() {
         uint32_t shift = st.top(); st.pop();
         uint32_t value = st.top(); st.pop();
         st.push(value >> shift);
     }
 
-    void do_end() {
+    inline void do_end() {
         st = std::stack<uint32_t>();
         instructions = std::vector<uint32_t>();
         thread = std::vector<uint32_t>();
         ip =0;
     }
 
-    void do_lod() {
+    inline void do_lod() {
         uint32_t offset = instructions[thread[ip]+1];
         uint32_t a = read_mem32(buffer,offset);
         st.push(a);
     } 
 
-    void do_sto() {
+    inline void do_sto() {
         uint32_t offset = instructions[thread[ip]+1];
         uint32_t a = st.top(); st.pop();
         write_mem32(buffer,a,offset);
     }
 
-    void do_immi() {
+    inline void do_immi() {
         uint32_t a = instructions[thread[ip]+1];
         st.push(a);
     }
 
-    void do_memcpy() {
+    inline void do_memcpy() {
         uint32_t dest = instructions[thread[ip]+1];
         uint32_t src = instructions[thread[ip]+2];
         uint32_t len = instructions[thread[ip]+3];
         memcpy(buffer + dest, buffer + src, len);
     }
 
-    void do_memset() {
+    inline void do_memset() {
         uint32_t dest = instructions[thread[ip]+1];
         uint32_t val = instructions[thread[ip]+2];
         uint32_t len = instructions[thread[ip]+3];
         memset(buffer + dest, val, len);
     }
-    void do_sto_immi() {
+    inline void do_sto_immi() {
         uint32_t offset = instructions[thread[ip]+1];
         uint32_t number = instructions[thread[ip]+2];
         write_mem32(buffer,number,offset);
     }
 
-    void do_jmp() {
+    inline void do_jmp() {
         uint32_t target = instructions[thread[ip]+1];
         ip = target - 1;
     }
 
-    void do_jz() {
+    inline void do_jz() {
         uint32_t target = instructions[thread[ip]+1];
         if (st.top() == 0) {
             ip = target - 1;
@@ -193,7 +193,7 @@ private:
         st.pop();
     }
 
-    void do_jump_if() {
+    inline void do_jump_if() {
         uint32_t condition = st.top(); st.pop();
         uint32_t target = instructions[thread[ip]+1];
         if (condition) {
@@ -201,43 +201,44 @@ private:
         }
     }
 
-    void do_if_else() {
+    inline void do_if_else() {
         uint32_t condition = st.top(); st.pop();
         uint32_t trueBranch = instructions[thread[ip]+1];
         uint32_t falseBranch = instructions[thread[ip]+2];
         ip = condition ? trueBranch - 1 : falseBranch - 1;
     }
-    void do_gt() {
+
+    inline void do_gt() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b > a ? 1 : 0);
     }
 
-    void do_lt() {
+    inline void do_lt() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b < a ? 1 : 0);
     }
 
-    void do_eq() {
+    inline void do_eq() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b == a ? 1 : 0);
     }
 
-    void do_gt_eq() {
+    inline void do_gt_eq() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b >= a ? 1 : 0);
     }
 
-    void do_lt_eq() {
+    inline void do_lt_eq() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b <= a ? 1 : 0);
     }
 
-    void do_call() {
+    inline void do_call() {
         uint32_t target = instructions[thread[ip]+1]; 
         uint32_t num_params = instructions[thread[ip]+2]; 
         std::stack<uint32_t> newStack;
@@ -251,7 +252,7 @@ private:
         ip = target - 1; 
     }
 
-    void do_ret() {
+    inline void do_ret() {
         if (callStack.empty()) {
             std::cerr << "Error: Call stack underflow" << std::endl;
             return;
@@ -263,11 +264,11 @@ private:
         st.push(return_value);
     }
 
-    void do_seek() {
+    inline void do_seek() {
         debug_num = st.top();
     }
 
-    void do_print() {
+    inline void do_print() {
         if (!st.empty()) {
             std::cout <<(int)st.top() << std::endl;
         } else {
@@ -275,7 +276,7 @@ private:
         }
     }
 
-    void do_print_fp() {
+    inline void do_print_fp() {
         if (!st.empty()) {
             uint32_t num = st.top();
             float* floatPtr = (float*)&num;
@@ -285,18 +286,22 @@ private:
         }
     }
 
-    void do_read_fp() {
+    inline void do_read_fp() {
         uint32_t offset = instructions[thread[ip]+1];
         float val;
         std::cin >> val; 
         write_mem32(buffer,from_float(val), offset);
     }
 
-    void do_read_int() {
+    inline void do_read_int() {
         uint32_t offset = instructions[thread[ip]+1];
         int val;
         std::cin >> val;
         write_mem32(buffer, val, offset);
+    }
+
+    inline void tik(){
+        std::cout<<"tik"<<std::endl;
     }
 
     void init_instruction_table() {
@@ -335,6 +340,7 @@ private:
         instructionTable[DT_READ_INT] = &IndirectThreadingVM::do_read_int;
         instructionTable[DT_FP_PRINT] = &IndirectThreadingVM::do_print_fp;
         instructionTable[DT_FP_READ] = &IndirectThreadingVM::do_read_fp;
+        instructionTable[DT_Tik] = &IndirectThreadingVM::tik;
     }
 
 public:

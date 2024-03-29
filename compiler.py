@@ -36,7 +36,9 @@ instruction_dict = {
     'DT_READ_INT': 32,
     'DT_FP_PRINT': 33,
     'DT_FP_READ': 34,
-    'DT_SYSCALL': 35,
+    'DT_TIK': 35,
+    'DT_SYSCALL': 36,
+    
 }
 
 def binary(code_str):

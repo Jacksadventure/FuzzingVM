@@ -40,6 +40,7 @@ enum Instruction {
     DT_READ_INT,
     DT_FP_PRINT,
     DT_FP_READ,
+    DT_Tik,
     //System
     DT_SYSCALL,
 };

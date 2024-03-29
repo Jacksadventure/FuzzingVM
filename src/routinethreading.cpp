@@ -286,6 +286,10 @@ private:
         write_mem32(buffer, val, offset);
     }
 
+    void tik(){
+        std::cout<<"tik"<<std::endl;
+    }
+
 public:
     uint32_t debug_num;
     RoutineThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) {
@@ -464,6 +468,9 @@ public:
                     break;
                 case DT_FP_READ:
                     do_read_fp(instructions[ip][1]);
+                    break;
+                case DT_Tik:
+                    tik();
                     break;
                 default:
                     std::cerr << "Error: Unknown subroutine "<< std::endl;

@@ -44,7 +44,7 @@ The `ThreadingVM` class is a virtual machine implementation that uses a direct t
 - **DT_FP_PRINT**: Prints the top floating-point number on the stack.(verified)
 - **DT_READ_INT**: Reads an integer from standard input and stores it at a specified memory offset.(verified)
 - **DT_READ_FP**: Reads a floating-point number from standard input and pushes it onto the stack.(verified)
-
+- **DT_TIK**: Print string "tik".
 ## How to Run
 - **For test**
 ```bash
