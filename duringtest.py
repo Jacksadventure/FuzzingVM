@@ -44,7 +44,7 @@ for vm_program in vm_programs:
 
 # Plotting the data
 for vm_program, tiks in vm_data.items():
-    plt.plot([i * 10 for i in range(len(tiks))], tiks, label=vm_program)
+    plt.plot([(i+1) * 10 for i in range(len(tiks))], tiks, label=vm_program)
 
 print(vm_data)
 
@@ -52,4 +52,5 @@ plt.xlabel('Time (minutes)')
 plt.ylabel('Loops Count')
 plt.title('Loops Counts over Time for VM Programs(DT_TIK,DT_JMP,0)')
 plt.legend()
-plt.savefig('tik_counts.png')
+plt.savefig('loop_counts.png')
+plt.show()
