@@ -1,5 +1,6 @@
 import struct
 import re
+import sys
 instruction_dict = {
     'DT_ADD': 0,
     'DT_SUB': 1,
@@ -41,7 +42,9 @@ instruction_dict = {
     
 }
 
-def binary(code_str):
+def binary(input_file, output_file):
+    with open(input_file, 'r') as file:
+        code_str = file.read()
     items = code_str.split(',')
     items = [s.strip() for s in items]
     byte_stream = bytearray()
@@ -54,7 +57,15 @@ def binary(code_str):
             byte_stream.extend(struct.pack('f', float(match.group(1))))
         else:
             byte_stream.extend(struct.pack('I', int(item)))
-    with open('program.bin', 'wb') as file:
+    with open(output_file, 'wb') as file:
         file.write(byte_stream)
 
 
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python compiler.py <input_file> <output_file>")
+        sys.exit(1)
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    binary(input_file, output_file)
+    print(f"Compiled {input_file} to {output_file}")

@@ -5,12 +5,8 @@
 #include <stack>
 #include <iostream>
 #include <cstring>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <fstream>
 #include <map>
-#include <unordered_set>   
 #include "readfile.hpp"
 #include "interface.hpp"
 #ifdef _WIN32
@@ -20,476 +16,245 @@
 
 struct pair_hash {
     size_t operator()(const std::pair<uint32_t, uint32_t>& p) const {
-        auto hash1 = std::hash<uint32_t>{}(p.first);
-        auto hash2 = std::hash<uint32_t>{}(p.second);
-        return hash1 ^ hash2; // 组合两个哈希值
+        return std::hash<uint32_t>{}(p.first) ^ std::hash<uint32_t>{}(p.second);
     }
 };
 
-class RoutineThreadingVM :public Interface{
+class RoutineThreadingVM : public Interface {
 private:
     uint32_t ip; // Instruction pointer
-    std::vector<std::stack<uint32_t> > sts; // Stacks for operations
-    std::stack<uint32_t> st;
-    std::vector<std::vector<uint32_t> > instructions; // Instruction set
-    char* buffer; // Memory buffer
-    std::stack<uint32_t> callStack; // Call stack for function calls
+    std::vector<std::stack<uint32_t>> sts; // Collection of operand stacks
+    std::stack<uint32_t> st;             // Current operand stack (st = sts.back())
+    std::vector<std::vector<uint32_t>> instructions; // Parsed instruction set
+    char* buffer;                       // Memory buffer
+    std::stack<uint32_t> callStack;     // Call stack
+
+    // Helper functions for conversion between uint32_t and float
     float to_float(uint32_t val) {
         return *reinterpret_cast<float*>(&val);
     }
-
     uint32_t from_float(float val) {
         return *reinterpret_cast<uint32_t*>(&val);
     }
-
+    
+    // Memory operations
     void write_memory(char* buffer, uint32_t* src, uint32_t offset, uint32_t size) {
         memcpy(buffer + offset, src, size);
     }
-
     void write_mem32(char* buffer, uint32_t val, uint32_t offset) {
         uint32_t buf[1] = { val };
         write_memory(buffer, buf, offset, 4);
     }
-
     void read_memory(char* buffer, uint8_t* dst, uint32_t offset, uint32_t size) {
         memcpy(dst, buffer + offset, size);
     }
-
     uint32_t read_mem32(char* buffer, uint32_t offset) {
         uint32_t buf[1];
-        read_memory(buffer, (uint8_t *)buf, offset, 4);
+        read_memory(buffer, reinterpret_cast<uint8_t*>(buf), offset, 4);
         return buf[0];
     }
-
-        // Define operations for each instruction
-    void do_add() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(a + b);
-    }
-
-    void do_sub() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b - a);
-    }
-
-    void do_mul() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(a * b);
-    }
-
-    void do_div() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        if (b == 0) {
-            std::cerr << "Error: Divided by zero error" << std::endl;
-            return;
-        }
-        st.push(b / a);
-    }
-
-    void do_fp_add() {
-        float a = to_float(st.top()); st.pop();
-        float b = to_float(st.top()); st.pop();
-        float result = a + b;
-        st.push(from_float(result));
-    }
-
-    void do_fp_sub() {
-        float a = to_float(st.top()); st.pop();
-        float b = to_float(st.top()); st.pop();
-        float result = b - a;
-        st.push(from_float(result));
-    }
-
-    void do_fp_mul() {
-        float a = to_float(st.top()); st.pop();
-        float b = to_float(st.top()); st.pop();
-        float result = a * b;
-        st.push(from_float(result));
-    }
-
-    void do_fp_div() {
-        float a = to_float(st.top()); st.pop();
-        float b = to_float(st.top()); st.pop();
-        if (b == 0.0f) {
-            std::cerr << "Division by zero error" << std::endl;
-            return;
-        }
-        float result = b / a;
-        st.push(from_float(result));
-    }
-
-    void do_inc() {
-        uint32_t a = st.top(); st.pop();
-        st.push(++a);
-    }
-
-    void do_dec() {
-        uint32_t a = st.top(); st.pop();
-        st.push(--a);
-    }
-
-    void do_shl() {
-        uint32_t shift = st.top(); st.pop();
-        uint32_t value = st.top(); st.pop();
-        st.push(value << shift);
-    }
-
-    void do_shr() {
-        uint32_t shift = st.top(); st.pop();
-        uint32_t value = st.top(); st.pop();
-        st.push(value >> shift);
-    }
-
-    void do_end() {
-        st = std::stack<uint32_t>();
-        instructions = std::vector<std::vector<uint32_t> >();
-        ip = 0;
-    }
-
-    void do_lod(uint32_t offset) {
-        uint32_t a = read_mem32(buffer,offset);
-        st.push(a);
-    }
-
-    void do_sto(uint32_t offset) {
-        uint32_t a = st.top(); st.pop();
-        write_mem32(buffer,a,offset);
-    }
-
-    void do_immi(uint32_t a) {
-        st.push(a);
-    }
-
-    void do_memcpy(uint32_t dest,uint32_t src,uint32_t len) {
-
-        memcpy(buffer + dest, buffer + src, len);
-    }
-
-    void do_memset(uint32_t dest,uint32_t val,uint32_t len) {
-        memset(buffer + dest, val, len);
-    }
-    void do_sto_immi(uint32_t offset,uint32_t number) {
-        write_mem32(buffer,number,offset);
-    }
-
-    void do_jmp(uint32_t target) {
-        ip = target - 1;
-    }
-
-    void do_jz(uint32_t target) {
-        if (st.top() == 0) {
-            ip = target - 1;
-        }
-        st.pop();
-    }
-
-    void do_jump_if(uint32_t target) {
-        uint32_t condition = st.top(); st.pop();
-        if (condition) {
-            ip = target - 1;
-        }
-    }
-
-    void do_if_else(uint32_t trueBranch, uint32_t falseBranch) {
-        uint32_t condition = st.top(); st.pop();
-        ip = condition ? trueBranch - 1 : falseBranch - 1;
-    }
-    void do_gt() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b > a ? 1 : 0);
-    }
-
-    void do_lt() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b < a ? 1 : 0);
-    }
-
-    void do_eq() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b == a ? 1 : 0);
-    }
-
-    void do_gt_eq() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b >= a ? 1 : 0);
-    }
-
-    void do_lt_eq() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b <= a ? 1 : 0);
-    }
-
-    void do_call(uint32_t target, uint32_t num_params) {
-        std::stack<uint32_t> newStack;
-         for (uint32_t i = 0; i < num_params; ++i) {
-            newStack.push(st.top());
-            st.pop();
-        }
-        sts.push_back(newStack);
-        st=sts.back();//st always refer to the top of stacks.
-        callStack.push(ip); 
-        ip = target - 1; 
-    }
-
-    void do_ret() {
-        if (callStack.empty()) {
-            std::cerr << "Error: Call stack underflow" << std::endl;
-            return;
-        }
-        uint32_t return_value = st.top();
-        ip = callStack.top(); callStack.pop(); 
-        sts.pop_back();
-        st = sts.back();
-        st.push(return_value);
-    }
-
-    void do_seek() {
-        debug_num = st.top();
-    }
-
-    void do_print() {
-        if (!st.empty()) {
-            std::cout <<(int)st.top() << std::endl;
-        } else {
-            std::cerr << "Stack is empty." << std::endl;
-        }
-    }
-
-    void do_print_fp() {
-        if (!st.empty()) {
-            uint32_t num = st.top();
-            float* floatPtr = (float*)&num;
-            std::cout <<*floatPtr << std::endl;
-        } else {
-            std::cerr << "Stack is empty." << std::endl;
-        }
-    }
-
-    void do_read_fp(uint32_t offset) {
-        float val;
-        std::cin >> val; 
-        write_mem32(buffer,from_float(val), offset);
-    }
-
-    void do_read_int(uint32_t offset) {
-        int val;
-        std::cin >> val;
-        write_mem32(buffer, val, offset);
-    }
-
-    void tik(){
-        std::cout<<"tik"<<std::endl;
-    }
-
+    
 public:
-    uint32_t debug_num;
     RoutineThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]) {
-        debug_num = 0xFFFFFFFF;
         sts.push_back(std::stack<uint32_t>());
         st = sts.back();
     }
-
     ~RoutineThreadingVM() {
         delete[] buffer;
     }
     
-    void run_vm(std::string filename,bool benchmarkMode){
-        std::vector<uint32_t> code = readFileToUint32Array(filename);
-        std::map<int, int> addressMap;  
-        std::vector<std::vector<uint32_t>> instructions;
-        uint32_t pointer = 0;  
-        uint32_t instructionIndex = 0;  
-        while(pointer < code.size()){
-            uint32_t instructionStart = pointer;
-            std::vector<uint32_t> instruction;  
-            instruction.push_back(code[pointer++]);
-            switch (instruction[0]) {
-                case DT_LOD:
-                case DT_STO:
-                case DT_IMMI:
-                case DT_READ_INT:
-                case DT_FP_READ:
-                case DT_JMP:
-                case DT_JZ:
-                case DT_JUMP_IF:
-                    instruction.push_back(code[pointer++]);
-                    break;
-                case DT_MEMCPY:
-                case DT_MEMSET:
-                case DT_STO_IMMI:
-                case DT_IF_ELSE:
-                case DT_CALL:
-                    instruction.push_back(code[pointer++]);
-                    instruction.push_back(code[pointer++]);
-                    break;
-            }
-
-            instructions.push_back(instruction);
-            addressMap[instructionStart] = instructionIndex++;
+    // generateCFile:
+    // Generates a pure C source file based solely on the instruction set.
+    // No extra commentary is output in the generated main function.
+    void generateCFile(const std::vector<std::vector<uint32_t>>& ins, const std::string& output_filename) {
+        std::ofstream out(output_filename);
+        if (!out) {
+            std::cerr << "Unable to open file " << output_filename << " for writing." << std::endl;
+            return;
         }
-        for (auto &instruction : instructions) {
-            switch (instruction[0]) {
-                case DT_JMP:
-                case DT_JZ:
-                case DT_JUMP_IF:
-                case DT_CALL:
-                    if (instruction.size() > 1) {
-                        instruction[1] = addressMap[instruction[1]];
-                    }
-                    break;
-                case DT_IF_ELSE:
-                    if (instruction.size() > 2) {
-                        instruction[1] = addressMap[instruction[1]];
-                        instruction[2] = addressMap[instruction[2]];
-                    }
-                    break;
-            }
-        }
-        if (benchmarkMode) {
-            std::cout << "Preprocessing completed, starting benchmark..." << std::endl;
-        }
-        run_vm(instructions);
-    }
-
-    void run_vm(const std::vector<std::vector<uint32_t>>& ins) {
-        instructions = ins;
-        for (ip = 0; ip < instructions.size(); ip++) {
-            switch (instructions[ip][0]) {
+        // Standard headers and macro definitions
+        out << "#include <stdio.h>\n#include <stdlib.h>\n#include <stdint.h>\n#include <string.h>\n\n";
+        out << "#define STACK_SIZE 1024\n#define BUFFER_SIZE (4 * 1024 * 1024)\n\n";
+        // Global variables: stack, stack pointer, and memory buffer
+        out << "uint32_t stack[STACK_SIZE];\nint top_index = -1;\nchar buffer[BUFFER_SIZE];\n\n";
+        // Helper functions for conversion between uint32_t and float
+        out << "float to_float(uint32_t val) {\n";
+        out << "    union { uint32_t i; float f; } u;\n    u.i = val; return u.f;\n}\n";
+        out << "uint32_t from_float(float f) {\n";
+        out << "    union { uint32_t i; float f; } u;\n    u.f = f; return u.i;\n}\n\n";
+        // Routine-threading macros and functions
+        out << "#define guard(n) asm(\"#\" #n)\n\n";
+        out << "void next1() { guard(1); }\nvoid next2() { guard(2); }\n";
+        out << "void next3() { guard(3); }\nvoid next4() { guard(4); }\nvoid next5() { guard(5); }\n\n";
+        out << "void loop_func() {\n    static int count = 100000000;\n";
+        out << "    if(count <= 0) exit(0);\n    count--; \n}\n\n";
+        // Embedded instruction implementation functions
+        out << "void do_add() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n    stack[++top_index] = a + b;\n}\n\n";
+        out << "void do_sub() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n    stack[++top_index] = b - a;\n}\n\n";
+        out << "void do_mul() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n    stack[++top_index] = a * b;\n}\n\n";
+        out << "void do_div() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n";
+        out << "    if(a == 0) { fprintf(stderr, \"Error: Division by zero\\n\"); exit(1); }\n";
+        out << "    stack[++top_index] = b / a;\n}\n\n";
+        out << "void do_shl() {\n    uint32_t shift = stack[top_index--];\n    uint32_t value = stack[top_index--];\n    stack[++top_index] = value << shift;\n}\n\n";
+        out << "void do_shr() {\n    uint32_t shift = stack[top_index--];\n    uint32_t value = stack[top_index--];\n    stack[++top_index] = value >> shift;\n}\n\n";
+        out << "void do_fp_add() {\n    float a = to_float(stack[top_index--]);\n    float b = to_float(stack[top_index--]);\n";
+        out << "    stack[++top_index] = from_float(a + b);\n}\n\n";
+        out << "void do_fp_sub() {\n    float a = to_float(stack[top_index--]);\n    float b = to_float(stack[top_index--]);\n";
+        out << "    stack[++top_index] = from_float(b - a);\n}\n\n";
+        out << "void do_fp_mul() {\n    float a = to_float(stack[top_index--]);\n    float b = to_float(stack[top_index--]);\n";
+        out << "    stack[++top_index] = from_float(a * b);\n}\n\n";
+        out << "void do_fp_div() {\n    float a = to_float(stack[top_index--]);\n    float b = to_float(stack[top_index--]);\n";
+        out << "    if(a == 0.0f) { fprintf(stderr, \"Error: Division by zero\\n\"); exit(1); }\n";
+        out << "    stack[++top_index] = from_float(b / a);\n}\n\n";
+        out << "void do_end() {\n    top_index = -1;\n    memset(buffer, 0, BUFFER_SIZE);\n}\n\n";
+        out << "void do_lod(uint32_t offset) {\n    uint32_t value;\n";
+        out << "    memcpy(&value, buffer + offset, sizeof(uint32_t));\n";
+        out << "    stack[++top_index] = value;\n}\n\n";
+        out << "void do_sto(uint32_t offset) {\n    uint32_t value = stack[top_index--];\n";
+        out << "    memcpy(buffer + offset, &value, sizeof(uint32_t));\n}\n\n";
+        out << "void do_immi(uint32_t value) {\n    stack[++top_index] = value;\n}\n\n";
+        out << "void do_inc() {\n    uint32_t value = stack[top_index--];\n    stack[++top_index] = value + 1;\n}\n\n";
+        out << "void do_dec() {\n    uint32_t value = stack[top_index--];\n    stack[++top_index] = value - 1;\n}\n\n";
+        out << "void do_sto_immi(uint32_t offset, uint32_t number) {\n";
+        out << "    memcpy(buffer + offset, &number, sizeof(uint32_t));\n}\n\n";
+        out << "void do_memcpy(uint32_t dest, uint32_t src, uint32_t len) {\n";
+        out << "    memcpy(buffer + dest, buffer + src, len);\n}\n\n";
+        out << "void do_memset(uint32_t dest, uint32_t val, uint32_t len) {\n";
+        out << "    memset(buffer + dest, val, len);\n}\n\n";
+        out << "void do_jmp(uint32_t target) { }\n\n";
+        out << "void do_jz(uint32_t target) { }\n\n";
+        out << "void do_jump_if(uint32_t target) { }\n\n";
+        out << "void do_if_else(uint32_t trueBranch, uint32_t falseBranch) { }\n\n";
+        out << "void do_gt() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n";
+        out << "    stack[++top_index] = (b > a) ? 1 : 0;\n}\n\n";
+        out << "void do_lt() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n";
+        out << "    stack[++top_index] = (b < a) ? 1 : 0;\n}\n\n";
+        out << "void do_eq() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n";
+        out << "    stack[++top_index] = (b == a) ? 1 : 0;\n}\n\n";
+        out << "void do_gt_eq() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n";
+        out << "    stack[++top_index] = (b >= a) ? 1 : 0;\n}\n\n";
+        out << "void do_lt_eq() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n";
+        out << "    stack[++top_index] = (b <= a) ? 1 : 0;\n}\n\n";
+        out << "void do_print() {\n    if (top_index >= 0) {\n";
+        out << "        printf(\"%u\\n\", stack[top_index]);\n";
+        out << "    } else { fprintf(stderr, \"Stack is empty.\\n\"); }\n}\n\n";
+        out << "void do_read_int(uint32_t offset) {\n    uint32_t val;\n";
+        out << "    scanf(\"%u\", &val);\n";
+        out << "    memcpy(buffer + offset, &val, sizeof(uint32_t));\n}\n\n";
+        out << "void do_fp_print() {\n    if (top_index >= 0) {\n";
+        out << "        float f = to_float(stack[top_index]);\n";
+        out << "        printf(\"%f\\n\", f);\n";
+        out << "    } else { fprintf(stderr, \"Stack is empty.\\n\"); }\n}\n\n";
+        out << "void do_fp_read(uint32_t offset) {\n    float val;\n";
+        out << "    scanf(\"%f\", &val);\n";
+        out << "    uint32_t ival = from_float(val);\n";
+        out << "    memcpy(buffer + offset, &ival, sizeof(uint32_t));\n}\n\n";
+        out << "void do_tik() { printf(\"tik\\n\"); }\n\n";
+        // Main function generation using the instruction set (ins)
+        out << "int main() {\nstart:\n";
+        for (const auto &instruction : ins) {
+            uint32_t opcode = instruction[0];
+            out << "    next1();\n    next2();\n";
+            switch (opcode) {
                 case DT_ADD:
-                    do_add();
-                    break;
+                    out << "    do_add();\n"; break;
                 case DT_SUB:
-                    do_sub();
-                    break;
+                    out << "    do_sub();\n"; break;
                 case DT_MUL:
-                    do_mul();
-                    break;
+                    out << "    do_mul();\n"; break;
                 case DT_DIV:
-                    do_div();
-                    break;
+                    out << "    do_div();\n"; break;
                 case DT_SHL:
-                    do_shl();
-                    break;
+                    out << "    do_shl();\n"; break;
                 case DT_SHR:
-                    do_shr();
-                    break;
+                    out << "    do_shr();\n"; break;
                 case DT_FP_ADD:
-                    do_fp_add();
-                    break;
+                    out << "    do_fp_add();\n"; break;
                 case DT_FP_SUB:
-                    do_fp_sub();
-                    break;
+                    out << "    do_fp_sub();\n"; break;
                 case DT_FP_MUL:
-                    do_fp_mul();
-                    break;
+                    out << "    do_fp_mul();\n"; break;
                 case DT_FP_DIV:
-                    do_fp_div();
-                    break;
+                    out << "    do_fp_div();\n"; break;
                 case DT_END:
-                    do_end();
-                    break;
+                    out << "    do_end();\n"; break;
                 case DT_LOD:
-                    do_lod(instructions[ip][1]);
+                    if (instruction.size() > 1)
+                        out << "    do_lod(" << instruction[1] << ");\n";
                     break;
                 case DT_STO:
-                    do_sto(instructions[ip][1]);
+                    if (instruction.size() > 1)
+                        out << "    do_sto(" << instruction[1] << ");\n";
                     break;
                 case DT_IMMI:
-                    do_immi(instructions[ip][1]);
+                    if (instruction.size() > 1)
+                        out << "    do_immi(" << instruction[1] << ");\n";
                     break;
                 case DT_INC:
-                    do_inc();
-                    break;
+                    out << "    do_inc();\n"; break;
                 case DT_DEC:
-                    do_dec();
-                    break;
+                    out << "    do_dec();\n"; break;
                 case DT_STO_IMMI:
-                    do_sto_immi(instructions[ip][1],instructions[ip][2]);
+                    if (instruction.size() > 2)
+                        out << "    do_sto_immi(" << instruction[1] << ", " << instruction[2] << ");\n";
                     break;
                 case DT_MEMCPY:
-                    do_memcpy(instructions[ip][1],instructions[ip][2],instructions[ip][3]);
+                    if (instruction.size() > 3)
+                        out << "    do_memcpy(" << instruction[1] << ", " << instruction[2] << ", " << instruction[3] << ");\n";
                     break;
                 case DT_MEMSET:
-                    do_memset(instructions[ip][1],instructions[ip][2],instructions[ip][3]);
+                    if (instruction.size() > 3)
+                        out << "    do_memset(" << instruction[1] << ", " << instruction[2] << ", " << instruction[3] << ");\n";
                     break;
                 case DT_JMP:
-                    do_jmp(instructions[ip][1]);
+                    if (instruction.size() > 1)
+                        out << "    do_jmp(" << instruction[1] << ");\n";
                     break;
                 case DT_JZ:
-                    do_jz(instructions[ip][1]);
+                    if (instruction.size() > 1)
+                        out << "    do_jz(" << instruction[1] << ");\n";
                     break;
                 case DT_JUMP_IF:
-                    do_jump_if(instructions[ip][1]);
+                    if (instruction.size() > 1)
+                        out << "    do_jump_if(" << instruction[1] << ");\n";
                     break;
                 case DT_IF_ELSE:
-                    do_if_else(instructions[ip][1], instructions[ip][2]);
+                    if (instruction.size() > 2)
+                        out << "    do_if_else(" << instruction[1] << ", " << instruction[2] << ");\n";
                     break;
                 case DT_GT:
-                    do_gt();
-                    break;
+                    out << "    do_gt();\n"; break;
                 case DT_LT:
-                    do_lt();
-                    break;
+                    out << "    do_lt();\n"; break;
                 case DT_EQ:
-                    do_eq();
-                    break;
+                    out << "    do_eq();\n"; break;
                 case DT_GT_EQ:
-                    do_gt_eq();
-                    break;
+                    out << "    do_gt_eq();\n"; break;
                 case DT_LT_EQ:
-                    do_lt_eq();
-                    break;
-                case DT_CALL:
-                    do_call(instructions[ip][1], instructions[ip][2]);
-                    break;
-                case DT_RET:
-                    do_ret();
-                    break;
-                case DT_SEEK:
-                    do_seek();
-                    break;
+                    out << "    do_lt_eq();\n"; break;
                 case DT_PRINT:
-                    do_print();
-                    break;
+                    out << "    do_print();\n"; break;
                 case DT_READ_INT:
-                    do_read_int(instructions[ip][1]);
+                    if (instruction.size() > 1)
+                        out << "    do_read_int(" << instruction[1] << ");\n";
                     break;
                 case DT_FP_PRINT:
-                    do_print_fp();
-                    break;
+                    out << "    do_fp_print();\n"; break;
                 case DT_FP_READ:
-                    do_read_fp(instructions[ip][1]);
+                    if (instruction.size() > 1)
+                        out << "    do_fp_read(" << instruction[1] << ");\n";
                     break;
                 case DT_Tik:
-                    tik();
-                    break;
+                    out << "    do_tik();\n"; break;
                 default:
-                    std::cerr << "Error: Unknown subroutine "<< std::endl;
+                    break;
             }
+            out << "    next3();\n    next4();\n    next5();\n";
         }
-    }
-
-    static std::vector<uint32_t> convertToVMFormat(const std::string& input) {
-        std::vector<uint32_t> output;
-        for (char c : input) {
-            output.push_back(static_cast<uint32_t>(c));
-        }
-        output.push_back(static_cast<uint32_t>('\0'));
-        return output;
-    }
-
-    char* getBuffer() {
-        return buffer;
+        out << "    loop_func();\n    goto start;\n    return 0;\n}\n";
+        out.close();
+        std::cout << "C file generated successfully: " << output_filename << std::endl;
     }
 };
 
-#endif 
+#endif // ROUTINETHREADING_H

@@ -1,60 +1,61 @@
 #ifndef INDIRECTTHREADING_H
 #define INDIRECTTHREADING_H
+
 #include <vector>
 #include <stack>
 #include <iostream>
 #include <unistd.h>
+#include <fcntl.h>
 #include <fstream>
-#include <map>
-#include <unordered_set>   
-#include <fcntl.h>    
-#include <sys/types.h> 
-#include <sys/stat.h>  
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <cstring>
+#include "symbol.hpp"
 #include "readfile.hpp"
+#include "interface.hpp"
 #ifdef _WIN32
 #include <windows.h> // Windows-specific headers for file operations
 #endif
-#include "symbol.hpp"
-#include "interface.hpp"
-class IndirectThreadingVM : public Interface{
-private:
-    uint32_t ip; // Instruction pointer
-    std::vector<std::stack<uint32_t>> sts; // Stack for operations
-    std::stack<uint32_t> st;
-    std::vector<uint32_t> instructions; // Instruction set
-    std::vector<uint32_t> thread;
-    char* buffer; // Memory buffer
-    void (IndirectThreadingVM::*instructionTable[256])(void); // Function pointer table for instructions
-    std::stack<uint32_t> callStack; // Call stack for function calls
-    uint32_t length;
-    float to_float(uint32_t val) {
+#include <stdlib.h>
+
+class IndirectThreadingVM : public Interface {
+    uint32_t ip; // Instruction pointer (used for compatibility with inline functions)
+    std::vector<std::stack<uint32_t>> sts; // Stack for operations (for function calls)
+    std::stack<uint32_t> st;             // Primary operand stack
+    std::vector<uint32_t> instructions;  // Instruction set
+    char* buffer;                        // Memory buffer
+    void (IndirectThreadingVM::*instructionTable[256])(void); // (Unused in computed goto version)
+    std::stack<uint32_t> callStack;        // Call stack for function calls
+
+    inline float to_float(uint32_t val) {
         return *reinterpret_cast<float*>(&val);
     }
 
-    uint32_t from_float(float val) {
+    inline uint32_t from_float(float val) {
         return *reinterpret_cast<uint32_t*>(&val);
     }
 
-    void write_memory(char* buffer,uint32_t* src, uint32_t offset, uint32_t size) {
+    inline void write_memory(char* buffer, uint32_t* src, uint32_t offset, uint32_t size) {
         memcpy(buffer + offset, src, size);
     }
 
-    void write_mem32(char* buffer, uint32_t val, uint32_t offset) {
+    inline void write_mem32(char* buffer, uint32_t val, uint32_t offset) {
         uint32_t buf[1];
         buf[0] = val;
         write_memory(buffer, (uint32_t *)buf, offset, 4);
     }
 
-    void read_memory(char* buffer, uint8_t* dst, uint32_t offset, uint32_t size) {
+    inline void read_memory(char* buffer, uint8_t* dst, uint32_t offset, uint32_t size) {
         memcpy(dst, buffer + offset, size);
     }
 
-    uint32_t read_mem32(char* buffer, uint32_t offset) {
+    inline uint32_t read_mem32(char* buffer, uint32_t offset) {
         uint32_t buf[1];
         read_memory(buffer, (uint8_t *)buf, offset, 4);
         return buf[0];
     }
-    // Define operations for each instruction
+
+    // Arithmetic operations (integer and floating point)
     inline void do_add() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
@@ -76,7 +77,7 @@ private:
     inline void do_div() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
-        if (b == 0) {
+        if (a == 0) {
             std::cerr << "Error: Divided by zero error" << std::endl;
             return;
         }
@@ -107,7 +108,7 @@ private:
     inline void do_fp_div() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
-        if (b == 0.0f) {
+        if (a == 0.0f) {
             std::cerr << "Division by zero error" << std::endl;
             return;
         }
@@ -140,207 +141,20 @@ private:
     inline void do_end() {
         st = std::stack<uint32_t>();
         instructions = std::vector<uint32_t>();
-        thread = std::vector<uint32_t>();
-        ip =0;
+        ip = 0;
     }
 
-    inline void do_lod() {
-        uint32_t offset = instructions[thread[ip]+1];
-        uint32_t a = read_mem32(buffer,offset);
-        st.push(a);
-    } 
-
-    inline void do_sto() {
-        uint32_t offset = instructions[thread[ip]+1];
-        uint32_t a = st.top(); st.pop();
-        write_mem32(buffer,a,offset);
-    }
-
-    inline void do_immi() {
-        uint32_t a = instructions[thread[ip]+1];
-        st.push(a);
-    }
-
-    inline void do_memcpy() {
-        uint32_t dest = instructions[thread[ip]+1];
-        uint32_t src = instructions[thread[ip]+2];
-        uint32_t len = instructions[thread[ip]+3];
-        memcpy(buffer + dest, buffer + src, len);
-    }
-
-    inline void do_memset() {
-        uint32_t dest = instructions[thread[ip]+1];
-        uint32_t val = instructions[thread[ip]+2];
-        uint32_t len = instructions[thread[ip]+3];
-        memset(buffer + dest, val, len);
-    }
-    inline void do_sto_immi() {
-        uint32_t offset = instructions[thread[ip]+1];
-        uint32_t number = instructions[thread[ip]+2];
-        write_mem32(buffer,number,offset);
-    }
-
-    inline void do_jmp() {
-        uint32_t target = instructions[thread[ip]+1];
-        ip = target - 1;
-    }
-
-    inline void do_jz() {
-        uint32_t target = instructions[thread[ip]+1];
-        if (st.top() == 0) {
-            ip = target - 1;
-        }
-        st.pop();
-    }
-
-    inline void do_jump_if() {
-        uint32_t condition = st.top(); st.pop();
-        uint32_t target = instructions[thread[ip]+1];
-        if (condition) {
-            ip = target - 1;
-        }
-    }
-
-    inline void do_if_else() {
-        uint32_t condition = st.top(); st.pop();
-        uint32_t trueBranch = instructions[thread[ip]+1];
-        uint32_t falseBranch = instructions[thread[ip]+2];
-        ip = condition ? trueBranch - 1 : falseBranch - 1;
-    }
-
-    inline void do_gt() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b > a ? 1 : 0);
-    }
-
-    inline void do_lt() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b < a ? 1 : 0);
-    }
-
-    inline void do_eq() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b == a ? 1 : 0);
-    }
-
-    inline void do_gt_eq() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b >= a ? 1 : 0);
-    }
-
-    inline void do_lt_eq() {
-        uint32_t a = st.top(); st.pop();
-        uint32_t b = st.top(); st.pop();
-        st.push(b <= a ? 1 : 0);
-    }
-
-    inline void do_call() {
-        uint32_t target = instructions[thread[ip]+1]; 
-        uint32_t num_params = instructions[thread[ip]+2]; 
-        std::stack<uint32_t> newStack;
-         for (uint32_t i = 0; i < num_params; ++i) {
-            newStack.push(st.top());
-            st.pop();
-        }
-        sts.push_back(newStack);
-        st=sts.back();//st always refer to the top of stacks.
-        callStack.push(ip); 
-        ip = target - 1; 
-    }
-
-    inline void do_ret() {
-        if (callStack.empty()) {
-            std::cerr << "Error: Call stack underflow" << std::endl;
-            return;
-        }
-        uint32_t return_value = st.top();
-        ip = callStack.top(); callStack.pop(); 
-        sts.pop_back();
-        st = sts.back();
-        st.push(return_value);
-    }
-
-    inline void do_seek() {
-        debug_num = st.top();
-    }
-
-    inline void do_print() {
-        if (!st.empty()) {
-            std::cout <<(int)st.top() << std::endl;
-        } else {
-            std::cerr << "Stack is empty." << std::endl;
-        }
-    }
-
-    inline void do_print_fp() {
-        if (!st.empty()) {
-            uint32_t num = st.top();
-            float* floatPtr = (float*)&num;
-            std::cout <<*floatPtr << std::endl;
-        } else {
-            std::cerr << "Stack is empty." << std::endl;
-        }
-    }
-
-    inline void do_read_fp() {
-        uint32_t offset = instructions[thread[ip]+1];
-        float val;
-        std::cin >> val; 
-        write_mem32(buffer,from_float(val), offset);
-    }
-
-    inline void do_read_int() {
-        uint32_t offset = instructions[thread[ip]+1];
-        int val;
-        std::cin >> val;
-        write_mem32(buffer, val, offset);
-    }
-
+    // Memory operations
+    // (The computed goto loop will reimplement these operations inline.)
+    
+    // Other operations
     inline void tik(){
-        std::cout<<"tik"<<std::endl;
+        std::cout << "tik" << std::endl;
     }
 
+    // (The original instructionTable initialization is no longer used in the computed goto version.)
     void init_instruction_table() {
-        instructionTable[DT_ADD] = &IndirectThreadingVM::do_add;
-        instructionTable[DT_SUB] = &IndirectThreadingVM::do_sub;
-        instructionTable[DT_MUL] = &IndirectThreadingVM::do_mul;
-        instructionTable[DT_DIV] = &IndirectThreadingVM::do_div;
-        instructionTable[DT_SHL] = &IndirectThreadingVM::do_shl;
-        instructionTable[DT_SHR] = &IndirectThreadingVM::do_shr;
-        instructionTable[DT_FP_ADD] = &IndirectThreadingVM::do_fp_add;
-        instructionTable[DT_FP_SUB] = &IndirectThreadingVM::do_fp_sub;
-        instructionTable[DT_FP_MUL] = &IndirectThreadingVM::do_fp_mul;
-        instructionTable[DT_FP_DIV] = &IndirectThreadingVM::do_fp_div;
-        instructionTable[DT_END] = &IndirectThreadingVM::do_end;
-        instructionTable[DT_LOD] = &IndirectThreadingVM::do_lod;
-        instructionTable[DT_STO] = &IndirectThreadingVM::do_sto;
-        instructionTable[DT_IMMI] = &IndirectThreadingVM::do_immi;
-        instructionTable[DT_STO_IMMI] = &IndirectThreadingVM::do_sto_immi;
-        instructionTable[DT_MEMCPY] = &IndirectThreadingVM::do_memcpy;
-        instructionTable[DT_MEMSET] = &IndirectThreadingVM::do_memset;
-        instructionTable[DT_INC] = &IndirectThreadingVM::do_inc;
-        instructionTable[DT_DEC] = &IndirectThreadingVM::do_dec;
-        instructionTable[DT_JMP] = &IndirectThreadingVM::do_jmp;
-        instructionTable[DT_JZ] = &IndirectThreadingVM::do_jz;
-        instructionTable[DT_IF_ELSE] = &IndirectThreadingVM::do_if_else;
-        instructionTable[DT_JUMP_IF] = &IndirectThreadingVM::do_jump_if;
-        instructionTable[DT_GT] = &IndirectThreadingVM::do_gt;
-        instructionTable[DT_LT] = &IndirectThreadingVM::do_lt;
-        instructionTable[DT_EQ] = &IndirectThreadingVM::do_eq;
-        instructionTable[DT_GT_EQ] = &IndirectThreadingVM::do_gt_eq;
-        instructionTable[DT_LT_EQ] = &IndirectThreadingVM::do_lt_eq;
-        instructionTable[DT_CALL] = &IndirectThreadingVM::do_call;
-        instructionTable[DT_RET] = &IndirectThreadingVM::do_ret;
-        instructionTable[DT_SEEK] = &IndirectThreadingVM::do_seek;
-        instructionTable[DT_PRINT] = &IndirectThreadingVM::do_print;
-        instructionTable[DT_READ_INT] = &IndirectThreadingVM::do_read_int;
-        instructionTable[DT_FP_PRINT] = &IndirectThreadingVM::do_print_fp;
-        instructionTable[DT_FP_READ] = &IndirectThreadingVM::do_read_fp;
-        instructionTable[DT_Tik] = &IndirectThreadingVM::tik;
+        // This function can be left empty or removed since computed goto is used.
     }
 
 public:
@@ -356,147 +170,370 @@ public:
         delete[] buffer;
     }
 
-    void run_vm(const std::vector<uint32_t>& ins,const std::vector<uint32_t>& thd) {
-        instructions = ins;
-        thread = thd;
-        for (ip = 0; ip < thread.size(); ip++) {
-            (this->*instructionTable[instructions[thread[ip]]])();
-        }
-    } 
-    
-    void run_vm() {
-        for (ip = 0; ip < thread.size(); ip++) {
-            (this->*instructionTable[instructions[thread[ip]]])();
-        }
-    }
-
-    void run_vm(std::string filename,bool benchmarkMode){
-        std::vector<uint32_t> code = readFileToUint32Array(filename);
-        std::map<int,int> dic;
-        std::unordered_set<uint32_t> st;
-        uint32_t thread_count = 0;
-        uint32_t pointer_thd = 0;
-        while(pointer_thd<code.size()){
-            switch (code[pointer_thd])
-            {
-            case DT_LOD:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                break;
-            case DT_STO:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                break;
-            case DT_IMMI:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                break;
-            case DT_MEMCPY:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                break;
-            case DT_MEMSET:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                break;
-            case DT_STO_IMMI:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                break;
-            case DT_JMP:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                st.insert(pointer_thd+1);
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]);
-                break;
-            case DT_JZ:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                st.insert(pointer_thd+1);
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]); 
-                break;
-            case DT_IF_ELSE:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                st.insert(pointer_thd+1);
-                st.insert(pointer_thd+2);
-                instructions.push_back(code[pointer_thd++]); 
-                instructions.push_back(code[pointer_thd++]); 
-                instructions.push_back(code[pointer_thd++]); 
-                break;
-            case DT_JUMP_IF:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                st.insert(pointer_thd+1);
-                instructions.push_back(code[pointer_thd++]); 
-                instructions.push_back(code[pointer_thd++]); 
-            case DT_CALL:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                st.insert(pointer_thd+1);
-                instructions.push_back(code[pointer_thd++]); 
-                instructions.push_back(code[pointer_thd++]);
-                instructions.push_back(code[pointer_thd++]); 
-                break;
-            case DT_READ_INT:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]); 
-                instructions.push_back(code[pointer_thd++]); 
-                break;
-            case DT_FP_READ:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]); 
-                instructions.push_back(code[pointer_thd++]); 
-                break;
-            default:
-                thread.push_back(pointer_thd);
-                dic[pointer_thd] = thread_count++;
-                instructions.push_back(code[pointer_thd++]);
-                break;
+    // The filename-based run_vm now loads the instructions and then calls the computed goto version.
+    void run_vm(std::string filename, bool benchmarkMode) {
+        try {
+            instructions = readFileToUint32Array(filename);
+            if (benchmarkMode) {
+                std::cout << "Preprocessing completed, starting benchmark..." << std::endl;
             }
+            run_vm(instructions);
+        } catch (const std::exception& e) {
+            std::cerr << "Error: " << e.what() << std::endl;
         }
-
-        for (auto it = st.begin(); it != st.end(); ++it){
-            instructions[*it] = dic[instructions[*it]];
-        }
-        if (benchmarkMode) {
-            std::cout << "Preprocessing completed, starting benchmark..." << std::endl;
-        }
-        run_vm();
-    } 
-    std::vector<uint32_t> convertToVMFormat(const std::string& input) {
-        std::vector<uint32_t> output;
-        for (char c : input) {
-            output.push_back(static_cast<uint32_t>(c));
-        }
-        output.push_back(static_cast<uint32_t>('\0'));
-        return output;
     }
 
-    char* getBuffer() {
-        return buffer;
+    // The main interpreter loop using computed gotos (Indirect threading)
+    void run_vm(std::vector<uint32_t>& code) {
+        instructions = code;
+        // Pointer into our instruction array.
+        uint32_t* iptr = instructions.data();
+
+        // Build a dispatch table mapping opcodes to local labels.
+        static void* dispatch[256] = {
+            [DT_ADD]       = &&L_DT_ADD,
+            [DT_SUB]       = &&L_DT_SUB,
+            [DT_MUL]       = &&L_DT_MUL,
+            [DT_DIV]       = &&L_DT_DIV,
+            [DT_SHL]       = &&L_DT_SHL,
+            [DT_SHR]       = &&L_DT_SHR,
+            [DT_FP_ADD]    = &&L_DT_FP_ADD,
+            [DT_FP_SUB]    = &&L_DT_FP_SUB,
+            [DT_FP_MUL]    = &&L_DT_FP_MUL,
+            [DT_FP_DIV]    = &&L_DT_FP_DIV,
+            [DT_END]       = &&L_DT_END,
+            [DT_LOD]       = &&L_DT_LOD,
+            [DT_STO]       = &&L_DT_STO,
+            [DT_IMMI]      = &&L_DT_IMMI,
+            [DT_STO_IMMI]  = &&L_DT_STO_IMMI,
+            [DT_MEMCPY]    = &&L_DT_MEMCPY,
+            [DT_MEMSET]    = &&L_DT_MEMSET,
+            [DT_INC]       = &&L_DT_INC,
+            [DT_DEC]       = &&L_DT_DEC,
+            [DT_JMP]       = &&L_DT_JMP,
+            [DT_JZ]        = &&L_DT_JZ,
+            [DT_JUMP_IF]   = &&L_DT_JUMP_IF,
+            [DT_IF_ELSE]   = &&L_DT_IF_ELSE,
+            [DT_GT]        = &&L_DT_GT,
+            [DT_LT]        = &&L_DT_LT,
+            [DT_EQ]        = &&L_DT_EQ,
+            [DT_GT_EQ]     = &&L_DT_GT_EQ,
+            [DT_LT_EQ]     = &&L_DT_LT_EQ,
+            [DT_CALL]      = &&L_DT_CALL,
+            [DT_RET]       = &&L_DT_RET,
+            [DT_SEEK]      = &&L_DT_SEEK,
+            [DT_PRINT]     = &&L_DT_PRINT,
+            [DT_READ_INT]  = &&L_DT_READ_INT,
+            [DT_FP_PRINT]  = &&L_DT_FP_PRINT,
+            [DT_FP_READ]   = &&L_DT_FP_READ,
+            [DT_Tik]       = &&L_DT_Tik
+        };
+
+        // Macro to jump to the next instruction.
+#define NEXT goto *dispatch[*iptr++]
+
+        NEXT;
+
+    L_DT_ADD:
+        ip = (iptr - instructions.data()) - 1;
+        do_add();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_SUB:
+        ip = (iptr - instructions.data()) - 1;
+        do_sub();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_MUL:
+        ip = (iptr - instructions.data()) - 1;
+        do_mul();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_DIV:
+        ip = (iptr - instructions.data()) - 1;
+        do_div();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_SHL:
+        ip = (iptr - instructions.data()) - 1;
+        do_shl();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_SHR:
+        ip = (iptr - instructions.data()) - 1;
+        do_shr();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_FP_ADD:
+        ip = (iptr - instructions.data()) - 1;
+        do_fp_add();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_FP_SUB:
+        ip = (iptr - instructions.data()) - 1;
+        do_fp_sub();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_FP_MUL:
+        ip = (iptr - instructions.data()) - 1;
+        do_fp_mul();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_FP_DIV:
+        ip = (iptr - instructions.data()) - 1;
+        do_fp_div();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_END:
+        ip = (iptr - instructions.data()) - 1;
+        do_end();
+        return;
+    L_DT_LOD:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t offset = instructions[++ip];
+        uint32_t a = read_mem32(buffer, offset);
+        st.push(a);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
     }
+    L_DT_STO:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t offset = instructions[++ip];
+        uint32_t a = st.top(); st.pop();
+        write_mem32(buffer, a, offset);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_IMMI:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t a = instructions[++ip];
+        st.push(a);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_STO_IMMI:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t offset = instructions[++ip];
+        uint32_t number = instructions[++ip];
+        write_mem32(buffer, number, offset);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_MEMCPY:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t dest = instructions[++ip];
+        uint32_t src = instructions[++ip];
+        uint32_t len = instructions[++ip];
+        memcpy(buffer + dest, buffer + src, len);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_MEMSET:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t dest = instructions[++ip];
+        uint32_t val = instructions[++ip];
+        uint32_t len = instructions[++ip];
+        memset(buffer + dest, val, len);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_INC:
+        ip = (iptr - instructions.data()) - 1;
+        do_inc();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_DEC:
+        ip = (iptr - instructions.data()) - 1;
+        do_dec();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_JMP:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t target = instructions[++ip];
+        ip = target - 1;
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_JZ:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t target = instructions[++ip];
+        if (st.top() == 0) {
+            ip = target - 1;
+        }
+        st.pop();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_JUMP_IF:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t condition = st.top(); st.pop();
+        uint32_t target = instructions[++ip];
+        if (condition) {
+            ip = target - 1;
+        }
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_IF_ELSE:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t condition = st.top(); st.pop();
+        uint32_t trueBranch = instructions[++ip];
+        uint32_t falseBranch = instructions[++ip];
+        ip = condition ? trueBranch - 1 : falseBranch - 1;
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_GT:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t a = st.top(); st.pop();
+        uint32_t b = st.top(); st.pop();
+        st.push(b > a ? 1 : 0);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_LT:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t a = st.top(); st.pop();
+        uint32_t b = st.top(); st.pop();
+        st.push(b < a ? 1 : 0);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_EQ:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t a = st.top(); st.pop();
+        uint32_t b = st.top(); st.pop();
+        st.push(b == a ? 1 : 0);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_GT_EQ:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t a = st.top(); st.pop();
+        uint32_t b = st.top(); st.pop();
+        st.push(b >= a ? 1 : 0);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_LT_EQ:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t a = st.top(); st.pop();
+        uint32_t b = st.top(); st.pop();
+        st.push(b <= a ? 1 : 0);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_CALL:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t target = instructions[++ip];
+        uint32_t num_params = instructions[++ip];
+        std::stack<uint32_t> newStack;
+        for (uint32_t i = 0; i < num_params; ++i) {
+            newStack.push(st.top());
+            st.pop();
+        }
+        sts.push_back(newStack);
+        st = sts.back();
+        callStack.push(ip);
+        ip = target - 1;
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_RET:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        if (callStack.empty()) {
+            std::cerr << "Error: Call stack underflow" << std::endl;
+            return;
+        }
+        uint32_t return_value = st.top();
+        ip = callStack.top(); callStack.pop();
+        sts.pop_back();
+        st = sts.back();
+        st.push(return_value);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_SEEK:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        debug_num = st.top();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_PRINT:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        if (!st.empty()) {
+            std::cout << (int)st.top() << std::endl;
+        } else {
+            std::cerr << "Stack is empty." << std::endl;
+        }
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_READ_INT:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t offset = instructions[++ip];
+        int val;
+        std::cin >> val;
+        write_mem32(buffer, val, offset);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_FP_PRINT:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        if (!st.empty()) {
+            uint32_t num = st.top();
+            float* floatPtr = reinterpret_cast<float*>(&num);
+            std::cout << *floatPtr << std::endl;
+        } else {
+            std::cerr << "Stack is empty." << std::endl;
+        }
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_FP_READ:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t offset = instructions[++ip];
+        float val;
+        std::cin >> val;
+        write_mem32(buffer, from_float(val), offset);
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+    L_DT_Tik:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        tik();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    }
+
+#undef NEXT
+    // End of computed goto loop.
+    // (If execution reaches here, simply return.)
+    return;
+}
 };
 #endif // INDIRECTTHREADING_H
 
