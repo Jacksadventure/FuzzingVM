@@ -14,18 +14,12 @@
 #endif
 #include "symbol.hpp"
 
-struct pair_hash {
-    size_t operator()(const std::pair<uint32_t, uint32_t>& p) const {
-        return std::hash<uint32_t>{}(p.first) ^ std::hash<uint32_t>{}(p.second);
-    }
-};
-
 class RoutineThreadingVM : public Interface {
 private:
     uint32_t ip; // Instruction pointer
     std::vector<std::stack<uint32_t>> sts; // Collection of operand stacks
     std::stack<uint32_t> st;             // Current operand stack (st = sts.back())
-    std::vector<std::vector<uint32_t>> instructions; // Parsed instruction set
+    std::vector<uint32_t> instructions; // Parsed instruction set
     char* buffer;                       // Memory buffer
     std::stack<uint32_t> callStack;     // Call stack
 
@@ -66,7 +60,14 @@ public:
     // generateCFile:
     // Generates a pure C source file based solely on the instruction set.
     // No extra commentary is output in the generated main function.
-    void generateCFile(const std::vector<std::vector<uint32_t>>& ins, const std::string& output_filename) {
+    void run_vm(std::string filename, bool benchmarkMode) {
+        try {
+            instructions = readFileToUint32Array(filename);
+        } catch (const std::exception &e) {
+            std::cerr << "Error reading file: " << e.what() << std::endl;
+            return;
+        }
+        std::string output_filename = filename + "_compiled" + ".c";
         std::ofstream out(output_filename);
         if (!out) {
             std::cerr << "Unable to open file " << output_filename << " for writing." << std::endl;
@@ -84,11 +85,9 @@ public:
         out << "    union { uint32_t i; float f; } u;\n    u.f = f; return u.i;\n}\n\n";
         // Routine-threading macros and functions
         out << "#define guard(n) asm(\"#\" #n)\n\n";
-        out << "void next1() { guard(1); }\nvoid next2() { guard(2); }\n";
-        out << "void next3() { guard(3); }\nvoid next4() { guard(4); }\nvoid next5() { guard(5); }\n\n";
         out << "void loop_func() {\n    static int count = 100000000;\n";
         out << "    if(count <= 0) exit(0);\n    count--; \n}\n\n";
-        // Embedded instruction implementation functions
+        // Embedded instruction implementation functions (unchanged)
         out << "void do_add() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n    stack[++top_index] = a + b;\n}\n\n";
         out << "void do_sub() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n    stack[++top_index] = b - a;\n}\n\n";
         out << "void do_mul() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n    stack[++top_index] = a * b;\n}\n\n";
@@ -121,10 +120,8 @@ public:
         out << "    memcpy(buffer + dest, buffer + src, len);\n}\n\n";
         out << "void do_memset(uint32_t dest, uint32_t val, uint32_t len) {\n";
         out << "    memset(buffer + dest, val, len);\n}\n\n";
-        out << "void do_jmp(uint32_t target) { }\n\n";
-        out << "void do_jz(uint32_t target) { }\n\n";
-        out << "void do_jump_if(uint32_t target) { }\n\n";
-        out << "void do_if_else(uint32_t trueBranch, uint32_t falseBranch) { }\n\n";
+        // (Jump-related functions are no longer used in the generated code.)
+        // Flow control is now handled by direct goto's.
         out << "void do_gt() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n";
         out << "    stack[++top_index] = (b > a) ? 1 : 0;\n}\n\n";
         out << "void do_lt() {\n    uint32_t a = stack[top_index--];\n    uint32_t b = stack[top_index--];\n";
@@ -150,110 +147,209 @@ public:
         out << "    uint32_t ival = from_float(val);\n";
         out << "    memcpy(buffer + offset, &ival, sizeof(uint32_t));\n}\n\n";
         out << "void do_tik() { printf(\"tik\\n\"); }\n\n";
-        // Main function generation using the instruction set (ins)
-        out << "int main() {\nstart:\n";
-        for (const auto &instruction : ins) {
-            uint32_t opcode = instruction[0];
-            out << "    next1();\n    next2();\n";
+        
+        // ----------------------
+        // Generate main() using labels for each instruction index.
+        // ----------------------
+        out << "int main() {\n";
+        size_t i = 0;
+        while (i < instructions.size()) {
+            // Emit a label for the current instruction index:
+            out << "L" << i << ":\n";
+            uint32_t opcode = instructions[i++];
             switch (opcode) {
                 case DT_ADD:
-                    out << "    do_add();\n"; break;
+                    out << "    do_add();\n";
+                    break;
                 case DT_SUB:
-                    out << "    do_sub();\n"; break;
+                    out << "    do_sub();\n";
+                    break;
                 case DT_MUL:
-                    out << "    do_mul();\n"; break;
+                    out << "    do_mul();\n";
+                    break;
                 case DT_DIV:
-                    out << "    do_div();\n"; break;
+                    out << "    do_div();\n";
+                    break;
                 case DT_SHL:
-                    out << "    do_shl();\n"; break;
+                    out << "    do_shl();\n";
+                    break;
                 case DT_SHR:
-                    out << "    do_shr();\n"; break;
+                    out << "    do_shr();\n";
+                    break;
                 case DT_FP_ADD:
-                    out << "    do_fp_add();\n"; break;
+                    out << "    do_fp_add();\n";
+                    break;
                 case DT_FP_SUB:
-                    out << "    do_fp_sub();\n"; break;
+                    out << "    do_fp_sub();\n";
+                    break;
                 case DT_FP_MUL:
-                    out << "    do_fp_mul();\n"; break;
+                    out << "    do_fp_mul();\n";
+                    break;
                 case DT_FP_DIV:
-                    out << "    do_fp_div();\n"; break;
+                    out << "    do_fp_div();\n";
+                    break;
                 case DT_END:
-                    out << "    do_end();\n"; break;
-                case DT_LOD:
-                    if (instruction.size() > 1)
-                        out << "    do_lod(" << instruction[1] << ");\n";
+                    out << "    do_end();\n";
+                    out << "    return 0;\n";
                     break;
-                case DT_STO:
-                    if (instruction.size() > 1)
-                        out << "    do_sto(" << instruction[1] << ");\n";
-                    break;
-                case DT_IMMI:
-                    if (instruction.size() > 1)
-                        out << "    do_immi(" << instruction[1] << ");\n";
-                    break;
+                case DT_LOD: {
+                    if (i < instructions.size()) {
+                        uint32_t operand = instructions[i++];
+                        out << "    do_lod(" << operand << ");\n";
+                    } else {
+                        out << "    /* Error: missing operand for DT_LOD */\n";
+                    }
+                } break;
+                case DT_STO: {
+                    if (i < instructions.size()) {
+                        uint32_t operand = instructions[i++];
+                        out << "    do_sto(" << operand << ");\n";
+                    } else {
+                        out << "    /* Error: missing operand for DT_STO */\n";
+                    }
+                } break;
+                case DT_IMMI: {
+                    if (i < instructions.size()) {
+                        uint32_t operand = instructions[i++];
+                        out << "    do_immi(" << operand << ");\n";
+                    } else {
+                        out << "    /* Error: missing operand for DT_IMMI */\n";
+                    }
+                } break;
                 case DT_INC:
-                    out << "    do_inc();\n"; break;
+                    out << "    do_inc();\n";
+                    break;
                 case DT_DEC:
-                    out << "    do_dec();\n"; break;
-                case DT_STO_IMMI:
-                    if (instruction.size() > 2)
-                        out << "    do_sto_immi(" << instruction[1] << ", " << instruction[2] << ");\n";
+                    out << "    do_dec();\n";
                     break;
-                case DT_MEMCPY:
-                    if (instruction.size() > 3)
-                        out << "    do_memcpy(" << instruction[1] << ", " << instruction[2] << ", " << instruction[3] << ");\n";
-                    break;
-                case DT_MEMSET:
-                    if (instruction.size() > 3)
-                        out << "    do_memset(" << instruction[1] << ", " << instruction[2] << ", " << instruction[3] << ");\n";
-                    break;
-                case DT_JMP:
-                    if (instruction.size() > 1)
-                        out << "    do_jmp(" << instruction[1] << ");\n";
-                    break;
-                case DT_JZ:
-                    if (instruction.size() > 1)
-                        out << "    do_jz(" << instruction[1] << ");\n";
-                    break;
-                case DT_JUMP_IF:
-                    if (instruction.size() > 1)
-                        out << "    do_jump_if(" << instruction[1] << ");\n";
-                    break;
-                case DT_IF_ELSE:
-                    if (instruction.size() > 2)
-                        out << "    do_if_else(" << instruction[1] << ", " << instruction[2] << ");\n";
-                    break;
+                case DT_STO_IMMI: {
+                    if (i + 1 < instructions.size()) {
+                        uint32_t op1 = instructions[i++];
+                        uint32_t op2 = instructions[i++];
+                        out << "    do_sto_immi(" << op1 << ", " << op2 << ");\n";
+                    } else {
+                        out << "    /* Error: missing operands for DT_STO_IMMI */\n";
+                    }
+                } break;
+                case DT_MEMCPY: {
+                    if (i + 2 < instructions.size()) {
+                        uint32_t op1 = instructions[i++];
+                        uint32_t op2 = instructions[i++];
+                        uint32_t op3 = instructions[i++];
+                        out << "    do_memcpy(" << op1 << ", " << op2 << ", " << op3 << ");\n";
+                    } else {
+                        out << "    /* Error: missing operands for DT_MEMCPY */\n";
+                    }
+                } break;
+                case DT_MEMSET: {
+                    if (i + 2 < instructions.size()) {
+                        uint32_t op1 = instructions[i++];
+                        uint32_t op2 = instructions[i++];
+                        uint32_t op3 = instructions[i++];
+                        out << "    do_memset(" << op1 << ", " << op2 << ", " << op3 << ");\n";
+                    } else {
+                        out << "    /* Error: missing operands for DT_MEMSET */\n";
+                    }
+                } break;
+                case DT_JMP: {
+                    if (i < instructions.size()) {
+                        uint32_t target = instructions[i++];
+                        out << "    goto L" << target << ";\n";
+                        continue; // jump; skip default goto
+                    } else {
+                        out << "    /* Error: missing operand for DT_JMP */\n";
+                    }
+                } break;
+                case DT_JZ: {
+                    if (i < instructions.size()) {
+                        uint32_t target = instructions[i++];
+                        out << "    if (stack[top_index--] == 0) goto L" << target << ";\n";
+                    } else {
+                        out << "    /* Error: missing operand for DT_JZ */\n";
+                    }
+                } break;
+                case DT_JUMP_IF: {
+                    if (i < instructions.size()) {
+                        uint32_t target = instructions[i++];
+                        out << "    if (stack[top_index--] != 0) goto L" << target << ";\n";
+                    } else {
+                        out << "    /* Error: missing operand for DT_JUMP_IF */\n";
+                    }
+                } break;
+                case DT_IF_ELSE: {
+                    if (i + 1 < instructions.size()) {
+                        uint32_t trueBranch = instructions[i++];
+                        uint32_t falseBranch = instructions[i++];
+                        out << "    if (stack[top_index--] != 0) goto L" << trueBranch << ";\n";
+                        out << "    else goto L" << falseBranch << ";\n";
+                        continue;
+                    } else {
+                        out << "    /* Error: missing operands for DT_IF_ELSE */\n";
+                    }
+                } break;
                 case DT_GT:
-                    out << "    do_gt();\n"; break;
+                    out << "    do_gt();\n";
+                    break;
                 case DT_LT:
-                    out << "    do_lt();\n"; break;
+                    out << "    do_lt();\n";
+                    break;
                 case DT_EQ:
-                    out << "    do_eq();\n"; break;
+                    out << "    do_eq();\n";
+                    break;
                 case DT_GT_EQ:
-                    out << "    do_gt_eq();\n"; break;
+                    out << "    do_gt_eq();\n";
+                    break;
                 case DT_LT_EQ:
-                    out << "    do_lt_eq();\n"; break;
+                    out << "    do_lt_eq();\n";
+                    break;
                 case DT_PRINT:
-                    out << "    do_print();\n"; break;
-                case DT_READ_INT:
-                    if (instruction.size() > 1)
-                        out << "    do_read_int(" << instruction[1] << ");\n";
+                    out << "    do_print();\n";
                     break;
+                case DT_READ_INT: {
+                    if (i < instructions.size()) {
+                        uint32_t op = instructions[i++];
+                        out << "    do_read_int(" << op << ");\n";
+                    } else {
+                        out << "    /* Error: missing operand for DT_READ_INT */\n";
+                    }
+                } break;
                 case DT_FP_PRINT:
-                    out << "    do_fp_print();\n"; break;
-                case DT_FP_READ:
-                    if (instruction.size() > 1)
-                        out << "    do_fp_read(" << instruction[1] << ");\n";
+                    out << "    do_fp_print();\n";
                     break;
+                case DT_FP_READ: {
+                    if (i < instructions.size()) {
+                        uint32_t op = instructions[i++];
+                        out << "    do_fp_read(" << op << ");\n";
+                    } else {
+                        out << "    /* Error: missing operand for DT_FP_READ */\n";
+                    }
+                } break;
                 case DT_Tik:
-                    out << "    do_tik();\n"; break;
+                    out << "    do_tik();\n";
+                    break;
                 default:
                     break;
             }
-            out << "    next3();\n    next4();\n    next5();\n";
+            // If we haven't hit a jump that transfers control, then continue to the next instruction:
+            if (i < instructions.size()) {
+                out << "    goto L" << i << ";\n";
+            }
         }
-        out << "    loop_func();\n    goto start;\n    return 0;\n}\n";
+        out << "    return 0;\n}\n";
         out.close();
+        
         std::cout << "C file generated successfully: " << output_filename << std::endl;
+        // Compile the generated C file with clang
+        std::string clang_command = "clang -o " + filename + "_compiled" + " " + output_filename;
+        std::cout << "Compiling generated C file with clang: " << clang_command << std::endl;
+        system(clang_command.c_str());
+        // Execute the compiled binary
+        std::string exec_command = filename + "_compiled";
+        std::cout << "Executing compiled binary: " << exec_command << std::endl;
+        if (benchmarkMode) {
+            std::cout << "Benchmark mode enabled." << std::endl;
+        }
+        system(exec_command.c_str());
     }
 };
 

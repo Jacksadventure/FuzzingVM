@@ -144,9 +144,6 @@ class IndirectThreadingVM : public Interface {
         ip = 0;
     }
 
-    // Memory operations
-    // (The computed goto loop will reimplement these operations inline.)
-    
     // Other operations
     inline void tik(){
         std::cout << "tik" << std::endl;
@@ -294,35 +291,35 @@ public:
         uint32_t offset = instructions[++ip];
         uint32_t a = read_mem32(buffer, offset);
         st.push(a);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_STO:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t offset = instructions[++ip];
         uint32_t a = st.top(); st.pop();
         write_mem32(buffer, a, offset);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_IMMI:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t a = instructions[++ip];
         st.push(a);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_STO_IMMI:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t offset = instructions[++ip];
         uint32_t number = instructions[++ip];
         write_mem32(buffer, number, offset);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_MEMCPY:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -330,9 +327,9 @@ public:
         uint32_t src = instructions[++ip];
         uint32_t len = instructions[++ip];
         memcpy(buffer + dest, buffer + src, len);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_MEMSET:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -340,9 +337,9 @@ public:
         uint32_t val = instructions[++ip];
         uint32_t len = instructions[++ip];
         memset(buffer + dest, val, len);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_INC:
         ip = (iptr - instructions.data()) - 1;
         do_inc();
@@ -358,9 +355,9 @@ public:
         ip = (iptr - instructions.data()) - 1;
         uint32_t target = instructions[++ip];
         ip = target - 1;
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_JZ:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -369,9 +366,9 @@ public:
             ip = target - 1;
         }
         st.pop();
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_JUMP_IF:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -380,9 +377,9 @@ public:
         if (condition) {
             ip = target - 1;
         }
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_IF_ELSE:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -390,54 +387,54 @@ public:
         uint32_t trueBranch = instructions[++ip];
         uint32_t falseBranch = instructions[++ip];
         ip = condition ? trueBranch - 1 : falseBranch - 1;
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_GT:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b > a ? 1 : 0);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_LT:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b < a ? 1 : 0);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_EQ:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b == a ? 1 : 0);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_GT_EQ:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b >= a ? 1 : 0);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_LT_EQ:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
         st.push(b <= a ? 1 : 0);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_CALL:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -452,9 +449,9 @@ public:
         st = sts.back();
         callStack.push(ip);
         ip = target - 1;
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_RET:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -467,16 +464,16 @@ public:
         sts.pop_back();
         st = sts.back();
         st.push(return_value);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_SEEK:
     {
         ip = (iptr - instructions.data()) - 1;
         debug_num = st.top();
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_PRINT:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -485,9 +482,9 @@ public:
         } else {
             std::cerr << "Stack is empty." << std::endl;
         }
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_READ_INT:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -495,9 +492,9 @@ public:
         int val;
         std::cin >> val;
         write_mem32(buffer, val, offset);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_FP_PRINT:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -508,9 +505,9 @@ public:
         } else {
             std::cerr << "Stack is empty." << std::endl;
         }
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_FP_READ:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -518,23 +515,20 @@ public:
         float val;
         std::cin >> val;
         write_mem32(buffer, from_float(val), offset);
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
     L_DT_Tik:
     {
         ip = (iptr - instructions.data()) - 1;
         tik();
+    }
         iptr = instructions.data() + ip + 1;
         NEXT;
-    }
 
 #undef NEXT
-    // End of computed goto loop.
-    // (If execution reaches here, simply return.)
-    return;
-}
+        // End of computed goto loop.
+        return;
+    }
 };
 #endif // INDIRECTTHREADING_H
-
-

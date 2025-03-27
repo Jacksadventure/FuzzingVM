@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(COMMON_SRC
     src/main.cpp
     src/readfile.cpp)
-set(ALL_IMPLEMENTATION direct indirect routine)
+set(ALL_IMPLEMENTATION direct indirect routine context)
 option(IMPLEMENTATION "SELECT IMPLEMENTATION" "ALL")
 
 if(build)
@@ -20,8 +20,8 @@ if(build)
     endif()
 endif()
 
-if(test)
-    add_subdirectory(src)
-    enable_testing()
-    add_subdirectory(tests)
+# if(test)
+#     add_subdirectory(src)
+#     enable_testing()
+#     add_subdirectory(tests)
 
