@@ -14,6 +14,10 @@
 #ifdef sw
 #include "swthreading.cpp"
 #endif
+#ifdef repl
+#include "replthreading.cpp"
+#endif
+
 #include <memory>
 #include <iostream>
 int main(int argc, char* argv[]){
@@ -45,6 +49,9 @@ int main(int argc, char* argv[]){
     #endif
     #if sw
     vm = std::make_unique<SwThreadingVM>();
+    #endif
+    #if repl
+    vm = std::make_unique<ReplThreadingModel>();
     #endif
     if (!vm) {
         std::cerr << "Virtual machine implementation not initialized." << std::endl;
