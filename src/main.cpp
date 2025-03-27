@@ -11,8 +11,8 @@
 #ifdef context
 #include "contextthreading.cpp"
 #endif
-#ifdef switch
-#include "switchthreading.cpp"
+#ifdef sw
+#include "swthreading.cpp"
 #endif
 #include <memory>
 #include <iostream>
@@ -43,8 +43,8 @@ int main(int argc, char* argv[]){
     #if context
     vm = std::make_unique<ContextThreadingVM>();
     #endif
-    #if switch
-    vm = std::make_unique<SwitchThreadingVM>();
+    #if sw
+    vm = std::make_unique<SwThreadingVM>();
     #endif
     if (!vm) {
         std::cerr << "Virtual machine implementation not initialized." << std::endl;
