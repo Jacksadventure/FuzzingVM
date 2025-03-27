@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(COMMON_SRC
     src/main.cpp
     src/readfile.cpp)
-set(ALL_IMPLEMENTATION direct indirect routine context)
+set(ALL_IMPLEMENTATION direct indirect routine context switch)
 option(IMPLEMENTATION "SELECT IMPLEMENTATION" "ALL")
 
 if(build)
