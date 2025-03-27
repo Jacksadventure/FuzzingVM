@@ -8,6 +8,9 @@
 #ifdef routine
 #include "routinethreading.cpp"
 #endif
+#ifdef context
+#include "contextthreading.cpp"
+#endif
 #include <memory>
 #include <iostream>
 int main(int argc, char* argv[]){
@@ -33,6 +36,9 @@ int main(int argc, char* argv[]){
     vm = std::make_unique<IndirectThreadingVM>(); 
     #elif routine
     vm = std::make_unique<RoutineThreadingVM>();
+    #endif
+    #if context
+    vm = std::make_unique<ContextThreadingVM>();
     #endif
     if (!vm) {
         std::cerr << "Virtual machine implementation not initialized." << std::endl;
