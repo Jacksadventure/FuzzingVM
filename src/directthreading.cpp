@@ -72,7 +72,7 @@ class DirectThreadingVM : public Interface {
     inline void do_div() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
-        if (b == 0) {
+        if (a == 0) {
             std::cerr << "Error: Divided by zero error" << std::endl;
             return;
         }
@@ -103,7 +103,7 @@ class DirectThreadingVM : public Interface {
     inline void do_fp_div() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
-        if (b == 0.0f) {
+        if (a == 0.0f) {
             std::cerr << "Division by zero error" << std::endl;
             return;
         }
