@@ -43,4 +43,5 @@ enum Instruction {
     DT_Tik,
     //System
     DT_SYSCALL,
+    DT_RND
 };

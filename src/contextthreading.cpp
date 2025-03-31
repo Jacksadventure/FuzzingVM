@@ -11,6 +11,7 @@
 #include "symbol.hpp"
 #include "readfile.hpp"
 #include "interface.hpp"
+#include "rd.cpp"
 #ifdef _WIN32
 #include <windows.h> // Windows-specific headers for file operations
 #endif
@@ -299,6 +300,12 @@ class ContextThreadingVM : public Interface {
         std::cout<<"tik"<<std::endl;
     }
 
+    inline void do_rnd() {
+        if(!st.empty()){
+            uint32_t a = st.top();st.pop();
+            st.push(getRandomNumber(a));
+        }
+    }
     void init_instruction_table() {
         instructionTable[DT_ADD] = &ContextThreadingVM::do_add;
         instructionTable[DT_SUB] = &ContextThreadingVM::do_sub;
@@ -336,6 +343,7 @@ class ContextThreadingVM : public Interface {
         instructionTable[DT_FP_PRINT] = &ContextThreadingVM::do_print_fp;
         instructionTable[DT_FP_READ] = &ContextThreadingVM::do_read_fp;
         instructionTable[DT_Tik] = &ContextThreadingVM::tik;
+        instructionTable[DT_RND] = &ContextThreadingVM::do_rnd;
     }
 
 public:
