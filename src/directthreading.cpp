@@ -6,6 +6,8 @@
 #include <iostream>
 #include <cstring>
 #include <fstream>
+#include <cstdlib> // 为rand()添加
+#include <ctime>   // 为srand(time(NULL))添加
 #include "readfile.hpp"
 #include "interface.hpp"
 #ifdef _WIN32
@@ -46,6 +48,8 @@ private:
             case DT_PRINT:
             case DT_FP_PRINT:
             case DT_Tik:
+            case DT_RET:
+            case DT_RND:
                 return 0;
             case DT_LOD:
             case DT_STO:
@@ -55,6 +59,8 @@ private:
             case DT_JMP:
             case DT_JZ:
             case DT_JUMP_IF:
+            case DT_CALL:
+            case DT_SEEK:
                 return 1;
             case DT_STO_IMMI:
                 return 2;
@@ -122,12 +128,17 @@ public:
         }
         
         // Write standard headers and macro definitions.
-        out << "#include <stdio.h>\n#include <stdlib.h>\n#include <stdint.h>\n#include <string.h>\n\n";
+        out << "#include <stdio.h>\n#include <stdlib.h>\n#include <stdint.h>\n#include <string.h>\n";
+        out << "#include <time.h>\n\n"; // 为随机数生成添加time.h
+        
         out << "#define STACK_SIZE 1024\n#define BUFFER_SIZE (4 * 1024 * 1024)\n\n";
         
         // Global variables.
-        out << "uint32_t stack[STACK_SIZE];\nint top_index = -1;\nchar buffer[BUFFER_SIZE];\n\n";
-        
+        out << "uint32_t stack[STACK_SIZE];\nint top_index = -1;\nchar buffer[BUFFER_SIZE];\n";
+        out << "uint32_t callStack[STACK_SIZE];\nint call_top = -1; // 调用栈顶\n";
+        out << "uint32_t debug_num = 0; // 用于DT_SEEK\n\n";
+        out << "int32_t ip = -1; // Instruction pointer\n";
+
         // Helper conversion functions.
         out << "float to_float(uint32_t val) {\n";
         out << "    union { uint32_t i; float f; } u;\n    u.i = val; return u.f;\n}\n";
@@ -142,114 +153,171 @@ public:
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    stack[++top_index] = a + b;\n}\n\n";
+        
         out << "static inline void do_sub() {\n"
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    stack[++top_index] = b - a;\n}\n\n";
+        
         out << "static inline void do_mul() {\n"
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    stack[++top_index] = a * b;\n}\n\n";
+        
         out << "static inline void do_div() {\n"
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    if(a == 0) { fprintf(stderr, \"Error: Division by zero\\n\"); exit(1); }\n"
                "    stack[++top_index] = b / a;\n}\n\n";
+        
         out << "static inline void do_shl() {\n"
                "    uint32_t shift = stack[top_index--];\n"
                "    uint32_t value = stack[top_index--];\n"
                "    stack[++top_index] = value << shift;\n}\n\n";
+        
         out << "static inline void do_shr() {\n"
                "    uint32_t shift = stack[top_index--];\n"
                "    uint32_t value = stack[top_index--];\n"
                "    stack[++top_index] = value >> shift;\n}\n\n";
+        
         out << "static inline void do_fp_add() {\n"
                "    float a = to_float(stack[top_index--]);\n"
                "    float b = to_float(stack[top_index--]);\n"
                "    stack[++top_index] = from_float(a + b);\n}\n\n";
+        
         out << "static inline void do_fp_sub() {\n"
                "    float a = to_float(stack[top_index--]);\n"
                "    float b = to_float(stack[top_index--]);\n"
                "    stack[++top_index] = from_float(b - a);\n}\n\n";
+        
         out << "static inline void do_fp_mul() {\n"
                "    float a = to_float(stack[top_index--]);\n"
                "    float b = to_float(stack[top_index--]);\n"
                "    stack[++top_index] = from_float(a * b);\n}\n\n";
+        
         out << "static inline void do_fp_div() {\n"
                "    float a = to_float(stack[top_index--]);\n"
                "    float b = to_float(stack[top_index--]);\n"
                "    if(a == 0.0f) { fprintf(stderr, \"Error: Division by zero\\n\"); exit(1); }\n"
                "    stack[++top_index] = from_float(b / a);\n}\n\n";
+        
         out << "static inline void do_end() {\n"
                "    top_index = -1;\n"
                "    memset(buffer, 0, BUFFER_SIZE);\n}\n\n";
+        
         out << "static inline void do_lod(uint32_t offset) {\n"
                "    uint32_t value;\n"
                "    memcpy(&value, buffer + offset, sizeof(uint32_t));\n"
                "    stack[++top_index] = value;\n}\n\n";
+        
         out << "static inline void do_sto(uint32_t offset) {\n"
                "    uint32_t value = stack[top_index--];\n"
                "    memcpy(buffer + offset, &value, sizeof(uint32_t));\n}\n\n";
+        
         out << "static inline void do_immi(uint32_t value) {\n"
                "    stack[++top_index] = value;\n}\n\n";
+        
         out << "static inline void do_inc() {\n"
                "    uint32_t value = stack[top_index--];\n"
                "    stack[++top_index] = value + 1;\n}\n\n";
+        
         out << "static inline void do_dec() {\n"
                "    uint32_t value = stack[top_index--];\n"
                "    stack[++top_index] = value - 1;\n}\n\n";
+        
         out << "static inline void do_sto_immi(uint32_t offset, uint32_t number) {\n"
                "    memcpy(buffer + offset, &number, sizeof(uint32_t));\n}\n\n";
+        
         out << "static inline void do_memcpy(uint32_t dest, uint32_t src, uint32_t len) {\n"
                "    memcpy(buffer + dest, buffer + src, len);\n}\n\n";
+        
         out << "static inline void do_memset(uint32_t dest, uint32_t val, uint32_t len) {\n"
                "    memset(buffer + dest, val, len);\n}\n\n";
+        
         out << "static inline void do_gt() {\n"
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    stack[++top_index] = (b > a) ? 1 : 0;\n}\n\n";
+        
         out << "static inline void do_lt() {\n"
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    stack[++top_index] = (b < a) ? 1 : 0;\n}\n\n";
+        
         out << "static inline void do_eq() {\n"
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    stack[++top_index] = (b == a) ? 1 : 0;\n}\n\n";
+        
         out << "static inline void do_gt_eq() {\n"
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    stack[++top_index] = (b >= a) ? 1 : 0;\n}\n\n";
+        
         out << "static inline void do_lt_eq() {\n"
                "    uint32_t a = stack[top_index--];\n"
                "    uint32_t b = stack[top_index--];\n"
                "    stack[++top_index] = (b <= a) ? 1 : 0;\n}\n\n";
+        
         out << "static inline void do_print() {\n"
                "    if (top_index >= 0) {\n"
                "        printf(\"%u\\n\", stack[top_index]);\n"
                "    } else { fprintf(stderr, \"Stack is empty.\\n\"); }\n"
                "}\n\n";
+        
         out << "static inline void do_read_int(uint32_t offset) {\n"
                "    uint32_t val;\n"
                "    scanf(\"%u\", &val);\n"
                "    memcpy(buffer + offset, &val, sizeof(uint32_t));\n"
                "}\n\n";
+        
         out << "static inline void do_fp_print() {\n"
                "    if (top_index >= 0) {\n"
                "        float f = to_float(stack[top_index]);\n"
                "        printf(\"%f\\n\", f);\n"
                "    } else { fprintf(stderr, \"Stack is empty.\\n\"); }\n"
                "}\n\n";
+        
         out << "static inline void do_fp_read(uint32_t offset) {\n"
                "    float val;\n"
                "    scanf(\"%f\", &val);\n"
                "    uint32_t ival = from_float(val);\n"
                "    memcpy(buffer + offset, &ival, sizeof(uint32_t));\n"
                "}\n\n";
+        
+        out << "static inline void do_call(int target_inst) {\n"
+               "    callStack[++call_top] = ip;\n"
+               "}\n\n";
+        
+        out << "static inline int do_ret() {\n"
+               "    if (call_top >= 0) {\n"
+               "        return callStack[call_top--];\n"
+               "    } else {\n"
+               "        fprintf(stderr, \"Error: Return without call\\n\");\n"
+               "        exit(1);\n"
+               "    }\n"
+               "    return -1;\n"
+               "}\n\n";
+        
         out << "static inline void do_tik() { printf(\"tik\\n\"); }\n\n";
+        
+        out << "static inline void do_seek(uint32_t value) {\n"
+               "    debug_num = value;\n"
+               "}\n\n";
+        
+        out << "static inline void do_rnd() {\n"
+               "    uint32_t max = stack[top_index--];\n"
+               "    if (max == 0) {\n"
+               "        stack[++top_index] = 0;\n"
+               "        return;\n"
+               "    }\n"
+               "    stack[++top_index] = rand() % max;\n"
+               "}\n\n";
         
         // Generate main function with separate label and immediate arrays
         out << "int main() {\n";
+        out << "    // 初始化随机数生成器\n";
+        out << "    srand((unsigned int)time(NULL));\n\n";
         
         // Generate the labels array for each opcode
         out << "    // Label pointer array for computed goto\n";
@@ -293,7 +361,6 @@ public:
         out << "    };\n\n";
         
         // Initialize instruction and immediate value indices
-        out << "    int ip = -1; // Instruction pointer\n";
         if (!immediateValues.empty()) {
             out << "    int imm_index = -1; // Immediate value index\n";
         }
@@ -406,6 +473,13 @@ public:
                     break;
                 case DT_Tik:
                     out << "    do_tik();\n";
+                    break;
+                case DT_RND:
+                    out << "    do_rnd();\n";
+                    break;
+                case DT_SEEK:
+                    out << "    imm_index++;\n";
+                    out << "    do_seek(immediates[imm_index]);\n";
                     break;
                 case DT_JMP:
                     out << "    {\n";
@@ -536,6 +610,51 @@ public:
                     out << "        }\n";
                     out << "    }\n";
                     out << "    NEXT;\n";  // 这可能不会被执行到，但为了一致性添加
+                    break;
+                case DT_CALL:
+                    out << "    {\n";
+                    out << "        imm_index++;\n";
+                    out << "        int jump_offset = immediates[imm_index];\n";
+                    out << "        // 保存返回地址\n";
+                    out << "        do_call(ip);\n";
+                    
+                    // Calculate target instruction index
+                    out << "        // Calculate jump target\n";
+                    out << "        int current_inst = ip;\n";
+                    out << "        int target_inst = current_inst + jump_offset;\n";
+                    
+                    // Boundary check
+                    out << "        if (target_inst >= 0 && target_inst < " << opcodes.size() << ") {\n";
+                    out << "            ip = target_inst;\n";
+                    
+                    // Calculate immediate index
+                    out << "            // Set immediate index for target instruction\n";
+                    out << "            imm_index = opToImmIndices[target_inst] - 1;\n";
+                    
+                    out << "            goto *labels[ip];\n";
+                    out << "        } else {\n";
+                    out << "            fprintf(stderr, \"Error: Invalid call target\\n\");\n";
+                    out << "            exit(1);\n";
+                    out << "        }\n";
+                    out << "    }\n";
+                    break;
+                case DT_RET:
+                    out << "    {\n";
+                    out << "        // 获取返回地址\n";
+                    out << "        int return_ip = do_ret();\n";
+                    out << "        if (return_ip >= 0 && return_ip < " << opcodes.size() << ") {\n";
+                    out << "            ip = return_ip;\n";
+                    
+                    // Calculate immediate index
+                    out << "            // Set immediate index for return instruction\n";
+                    out << "            imm_index = opToImmIndices[ip] - 1;\n";
+                    
+                    out << "            NEXT;\n";
+                    out << "        } else {\n";
+                    out << "            fprintf(stderr, \"Error: Invalid return address\\n\");\n";
+                    out << "            exit(1);\n";
+                    out << "        }\n";
+                    out << "    }\n";
                     break;
                 case DT_END:
                     out << "    do_end();\n";
