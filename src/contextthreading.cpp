@@ -11,7 +11,6 @@
 #include "symbol.hpp"
 #include "readfile.hpp"
 #include "interface.hpp"
-#include "rd.cpp"
 #ifdef _WIN32
 #include <windows.h> // Windows-specific headers for file operations
 #endif

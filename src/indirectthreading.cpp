@@ -149,6 +149,13 @@ class IndirectThreadingVM : public Interface {
         std::cout << "tik" << std::endl;
     }
 
+    inline void do_rnd() {
+        if(!st.empty()){
+            uint32_t a = st.top();st.pop();
+            st.push(getRandomNumber(a));
+        }
+    }
+
     // (The original instructionTable initialization is no longer used in the computed goto version.)
     void init_instruction_table() {
         // This function can be left empty or removed since computed goto is used.
@@ -223,7 +230,8 @@ public:
             [DT_READ_INT]  = &&L_DT_READ_INT,
             [DT_FP_PRINT]  = &&L_DT_FP_PRINT,
             [DT_FP_READ]   = &&L_DT_FP_READ,
-            [DT_Tik]       = &&L_DT_Tik
+            [DT_Tik]       = &&L_DT_Tik,
+            [DT_RND]       = &&L_DT_RND
         };
 
         // Macro to jump to the next instruction.
@@ -525,7 +533,13 @@ public:
     }
         iptr = instructions.data() + ip + 1;
         NEXT;
-
+    L_DT_RND:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        do_rnd();
+    }
+        iptr = instructions.data() + ip + 1;
+        NEXT;
 #undef NEXT
         // End of computed goto loop.
         return;
