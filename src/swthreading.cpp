@@ -209,13 +209,12 @@ class SwThreadingVM : public Interface {
         }
         sts.push_back(newStack);
         st = sts.back(); 
-        callStack.push(ip);
+        callStack.push(ip+num_params);
         ip = target;
     }
     inline void do_ret() {
-        if (callStack.empty()) {
-            std::cerr << "Error: Call stack underflow" << std::endl;
-            return;
+        if (callStack.size() == 0) {
+            exit(0);
         }
         uint32_t return_value = st.top();
         st.pop();

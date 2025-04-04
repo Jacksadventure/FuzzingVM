@@ -53,4 +53,5 @@ file_path
 # folders
 build/
 .vscode/
+.idea/
 main.dSYM/

@@ -47,19 +47,11 @@ The `ThreadingVM` class is a virtual machine implementation that uses a direct t
 - **DT_TIK**: Print string "tik".
 - **DT_RND**: Pop a number from the stack and push a random number between 0 and the popped number(not included).
 ## How to Run
-- **For test**
-```bash
-mkdir build
-cd build
-cmake -Dtest=ON ..
-make 
-make test
-```
 - **For try it out(-DIMPELETATION choice direct indirect routine ALL)**
 ```bash
 mkdir build
 cd build
-cmake -Dbuild=ON -DIMPELETATION=ALL ..
+cmake -DIMPELETATION=ALL ..
 make
 ```
 - **Useful tool for generating indirect threading code from direct threading code**

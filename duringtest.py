@@ -21,7 +21,7 @@ def monitor_execution(proc, interval=600,period = 600 , duration=5400):
         line = proc.stdout.readline()  # Read a line of output
         if line:
             if "tik" in line:
-                total_tiks += 1
+                total_tiks +=                                                                                                                                                                                    
         current_time = time.time()
         if current_time - start_time >= interval:
             tik_counts.append(total_tiks)
