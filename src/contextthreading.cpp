@@ -23,6 +23,13 @@ class ContextThreadingVM : public Interface {
     char* buffer; // Memory buffer
     void (ContextThreadingVM::*instructionTable[256])(void); // Function pointer table for instructions
     std::stack<uint32_t> callStack; // Call stack for function calls
+    uint32_t seed = 2463534242UL; // Seed for random number generation
+    uint32_t rd() {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        return seed;
+    }
     inline float to_float(uint32_t val) {
         return *reinterpret_cast<float*>(&val);
     }
@@ -79,6 +86,16 @@ class ContextThreadingVM : public Interface {
         st.push(b / a);
     }
 
+    inline void do_mod() {
+        uint32_t a = st.top(); st.pop();
+        uint32_t b = st.top(); st.pop();
+        if (b == 0) {
+            std::cerr << "Error: Divided by zero error" << std::endl;
+            return;
+        }
+        st.push(b % a);
+    }
+
     inline void do_fp_add() {
         float a = to_float(st.top()); st.pop();
         float b = to_float(st.top()); st.pop();
@@ -133,6 +150,11 @@ class ContextThreadingVM : public Interface {
         st.push(value >> shift);
     }
 
+    inline void do_dup() {
+        uint32_t a = st.top();
+        st.push(a);
+    }
+
     inline void do_end() {
         st = std::stack<uint32_t>();
         instructions = std::vector<uint32_t>();
@@ -176,31 +198,32 @@ class ContextThreadingVM : public Interface {
     }
 
     inline void do_jmp() {
-        uint32_t target = instructions[++ip];
-        ip = target - 1;
+        // 读取相对偏移量，并将其转换为有符号数
+        int32_t offset = (int32_t)instructions[++ip];
+        ip += offset;
     }
 
     inline void do_jz() {
-        uint32_t target = instructions[++ip];
+        int32_t offset = (int32_t)instructions[++ip];
         if (st.top() == 0) {
-            ip = target - 1;
+            ip += offset;
         }
         st.pop();
     }
 
     inline void do_jump_if() {
         uint32_t condition = st.top(); st.pop();
-        uint32_t target = instructions[++ip];
+        int32_t offset = (int32_t)instructions[++ip];
         if (condition) {
-            ip = target - 1;
+            ip += offset;
         }
     }
 
     inline void do_if_else() {
         uint32_t condition = st.top(); st.pop();
-        uint32_t trueBranch = instructions[++ip];
-        uint32_t falseBranch = instructions[++ip];
-        ip = condition ? trueBranch - 1 : falseBranch - 1;
+        int32_t trueOffset = (int32_t)instructions[++ip];
+        int32_t falseOffset = (int32_t)instructions[++ip];
+        ip += (condition ? trueOffset : falseOffset);
     }
 
     inline void do_gt() {
@@ -249,14 +272,11 @@ class ContextThreadingVM : public Interface {
 
     inline void do_ret() {
         if (callStack.empty()) {
-            std::cerr << "Error: Call stack underflow" << std::endl;
-            return;
+            exit(0);
         }
-        uint32_t return_value = st.top();
         ip = callStack.top(); callStack.pop(); 
         sts.pop_back();
         st = sts.back();
-        st.push(return_value);
     }
 
     inline void do_seek() {
@@ -302,7 +322,7 @@ class ContextThreadingVM : public Interface {
     inline void do_rnd() {
         if(!st.empty()){
             uint32_t a = st.top();st.pop();
-            st.push(getRandomNumber(a));
+            st.push(rd() % a);
         }
     }
     void init_instruction_table() {
@@ -310,6 +330,7 @@ class ContextThreadingVM : public Interface {
         instructionTable[DT_SUB] = &ContextThreadingVM::do_sub;
         instructionTable[DT_MUL] = &ContextThreadingVM::do_mul;
         instructionTable[DT_DIV] = &ContextThreadingVM::do_div;
+        instructionTable[DT_MOD] = &ContextThreadingVM::do_mod;
         instructionTable[DT_SHL] = &ContextThreadingVM::do_shl;
         instructionTable[DT_SHR] = &ContextThreadingVM::do_shr;
         instructionTable[DT_FP_ADD] = &ContextThreadingVM::do_fp_add;
@@ -343,6 +364,7 @@ class ContextThreadingVM : public Interface {
         instructionTable[DT_FP_READ] = &ContextThreadingVM::do_read_fp;
         instructionTable[DT_Tik] = &ContextThreadingVM::tik;
         instructionTable[DT_RND] = &ContextThreadingVM::do_rnd;
+        instructionTable[DT_DUP] = &ContextThreadingVM::do_dup;
     }
 
 public:

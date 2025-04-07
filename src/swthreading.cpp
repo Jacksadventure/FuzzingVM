@@ -24,7 +24,13 @@ class SwThreadingVM : public Interface {
     std::vector<uint32_t> instructions; 
     char* buffer; 
     std::stack<uint32_t> callStack; 
-
+    uint32_t seed = 2463534242UL; // Seed for random number generation
+    inline uint32_t rd() {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        return seed;
+    }
     inline float to_float(uint32_t val) {
         return *reinterpret_cast<float*>(&val);
     }
@@ -69,6 +75,23 @@ class SwThreadingVM : public Interface {
             return;
         }
         st.push(b / a);
+    }
+    inline void do_mod() {
+        uint32_t a = st.top(); st.pop();
+        uint32_t b = st.top(); st.pop();
+        if (a == 0) { 
+            std::cerr << "Error: Modulo by zero error" << std::endl;
+            return;
+        }
+        st.push(b % a);
+    }
+    inline void do_dup() {
+        if (st.empty()) {
+            std::cerr << "Error: Stack is empty" << std::endl;
+            return;
+        }
+        uint32_t a = st.top();
+        st.push(a);
     }
     inline void do_fp_add() {
         float a = to_float(st.top()); st.pop();
@@ -149,30 +172,38 @@ class SwThreadingVM : public Interface {
         write_mem32(buffer, number, offset);
     }
 
+    // 将 do_jmp 修改为使用相对偏移量
     inline void do_jmp() {
-        uint32_t target = instructions[ip++];
-        ip = target;
+        int32_t offset = static_cast<int32_t>(instructions[ip++]);
+        ip = ip + offset;
     }
+
+    // 修改 do_jz，使其跳转目标为当前 ip 加上相对偏移量
     inline void do_jz() {
-        uint32_t target = instructions[ip++];
+        int32_t offset = static_cast<int32_t>(instructions[ip++]);
         uint32_t topVal = st.top(); st.pop();
         if (topVal == 0) {
-            ip = target;
+            ip = ip + offset;
         }
     }
+
+    // 修改 do_jump_if，同样使用相对偏移量
     inline void do_jump_if() {
         uint32_t condition = st.top(); st.pop();
-        uint32_t target = instructions[ip++];
+        int32_t offset = static_cast<int32_t>(instructions[ip++]);
         if (condition) {
-            ip = target;
+            ip = ip + offset;
         }
     }
+
+    // 修改 do_if_else，分别对 true 和 false 分支使用相对偏移量
     inline void do_if_else() {
         uint32_t condition = st.top(); st.pop();
-        uint32_t trueBranch = instructions[ip++];
-        uint32_t falseBranch = instructions[ip++];
-        ip = condition ? trueBranch : falseBranch;
+        int32_t trueOffset = static_cast<int32_t>(instructions[ip++]);
+        int32_t falseOffset = static_cast<int32_t>(instructions[ip++]);
+        ip = condition ? (ip + trueOffset) : (ip + falseOffset);
     }
+
     inline void do_gt() {
         uint32_t a = st.top(); st.pop();
         uint32_t b = st.top(); st.pop();
@@ -216,14 +247,12 @@ class SwThreadingVM : public Interface {
         if (callStack.size() == 0) {
             exit(0);
         }
-        uint32_t return_value = st.top();
         st.pop();
         ip = callStack.top(); callStack.pop();
         sts.pop_back();
         if (!sts.empty()) {
             st = sts.back();
         }
-        st.push(return_value);
     }
 
     inline void do_seek() {
@@ -260,7 +289,12 @@ class SwThreadingVM : public Interface {
     inline void tik() {
         std::cout << "tik" << std::endl;
     }
-
+    inline void do_rnd() {
+        if (!st.empty()) {
+            uint32_t a = st.top(); st.pop();
+            st.push(rd() % a);
+        }
+    }
 public:
     uint32_t debug_num;
     SwThreadingVM() : ip(0), buffer(new char[4 * 1024 * 1024]), debug_num(0xFFFFFFFF) {
@@ -298,6 +332,9 @@ public:
                     break;
                 case DT_DIV:
                     do_div();
+                    break;
+                case DT_MOD:
+                    do_mod();
                     break;
                 case DT_SHL:
                     do_shl();
@@ -394,6 +431,12 @@ public:
                     break;
                 case DT_Tik:
                     tik();
+                    break;
+                case DT_RND:
+                    do_rnd();
+                    break;
+                case DT_DUP:
+                    do_dup();
                     break;
                 default:
                     std::cerr << "Unknown instruction code: " << opcode << std::endl;

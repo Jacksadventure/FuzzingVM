@@ -26,7 +26,13 @@ class IndirectThreadingVM : public Interface {
     char* buffer;                        // Memory buffer
     void (IndirectThreadingVM::*instructionTable[256])(void); // (Unused in computed goto version)
     std::stack<uint32_t> callStack;        // Call stack for function calls
-
+    uint32_t seed = 2463534242UL; // Seed for random number generation
+    uint32_t rd() {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        return seed;
+    }
     inline float to_float(uint32_t val) {
         return *reinterpret_cast<float*>(&val);
     }
@@ -82,6 +88,16 @@ class IndirectThreadingVM : public Interface {
             return;
         }
         st.push(b / a);
+    }
+    
+    inline void do_mod() {
+        uint32_t a = st.top(); st.pop();
+        uint32_t b = st.top(); st.pop();
+        if (a == 0) {
+            std::cerr << "Error: Modulo by zero error" << std::endl;
+            return;
+        }
+        st.push(b % a);
     }
 
     inline void do_fp_add() {
@@ -151,8 +167,8 @@ class IndirectThreadingVM : public Interface {
 
     inline void do_rnd() {
         if(!st.empty()){
-            uint32_t a = st.top();st.pop();
-            st.push(getRandomNumber(a));
+            uint32_t a = st.top(); st.pop();
+            st.push(rd() % a);
         }
     }
 
@@ -199,6 +215,7 @@ public:
             [DT_SUB]       = &&L_DT_SUB,
             [DT_MUL]       = &&L_DT_MUL,
             [DT_DIV]       = &&L_DT_DIV,
+            [DT_MOD]       = &&L_DT_MOD,
             [DT_SHL]       = &&L_DT_SHL,
             [DT_SHR]       = &&L_DT_SHR,
             [DT_FP_ADD]    = &&L_DT_FP_ADD,
@@ -231,7 +248,8 @@ public:
             [DT_FP_PRINT]  = &&L_DT_FP_PRINT,
             [DT_FP_READ]   = &&L_DT_FP_READ,
             [DT_Tik]       = &&L_DT_Tik,
-            [DT_RND]       = &&L_DT_RND
+            [DT_RND]       = &&L_DT_RND,
+            [DT_DUP]       = &&L_DT_DUP,
         };
 
         // Macro to jump to the next instruction.
@@ -257,6 +275,11 @@ public:
     L_DT_DIV:
         ip = (iptr - instructions.data()) - 1;
         do_div();
+        iptr = instructions.data() + ip + 1;
+        NEXT;
+    L_DT_MOD:
+        ip = (iptr - instructions.data()) - 1;
+        do_mod();
         iptr = instructions.data() + ip + 1;
         NEXT;
     L_DT_SHL:
@@ -319,6 +342,14 @@ public:
     }
         iptr = instructions.data() + ip + 1;
         NEXT;
+    L_DT_DUP:
+    {
+        ip = (iptr - instructions.data()) - 1;
+        uint32_t a = st.top();
+        st.push(a);
+    }
+        iptr = instructions.data() + ip + 1;
+        NEXT;
     L_DT_STO_IMMI:
     {
         ip = (iptr - instructions.data()) - 1;
@@ -358,20 +389,21 @@ public:
         do_dec();
         iptr = instructions.data() + ip + 1;
         NEXT;
+    // 修改：将跳转指令的立即数视为相对偏移量
     L_DT_JMP:
     {
         ip = (iptr - instructions.data()) - 1;
-        uint32_t target = instructions[++ip];
-        ip = target - 1;
+        uint32_t offset = instructions[++ip];
+        ip = ip + offset;
     }
         iptr = instructions.data() + ip + 1;
         NEXT;
     L_DT_JZ:
     {
         ip = (iptr - instructions.data()) - 1;
-        uint32_t target = instructions[++ip];
+        uint32_t offset = instructions[++ip];
         if (st.top() == 0) {
-            ip = target - 1;
+            ip = ip + offset;
         }
         st.pop();
     }
@@ -381,9 +413,9 @@ public:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t condition = st.top(); st.pop();
-        uint32_t target = instructions[++ip];
+        uint32_t offset = instructions[++ip];
         if (condition) {
-            ip = target - 1;
+            ip = ip + offset;
         }
     }
         iptr = instructions.data() + ip + 1;
@@ -392,9 +424,9 @@ public:
     {
         ip = (iptr - instructions.data()) - 1;
         uint32_t condition = st.top(); st.pop();
-        uint32_t trueBranch = instructions[++ip];
-        uint32_t falseBranch = instructions[++ip];
-        ip = condition ? trueBranch - 1 : falseBranch - 1;
+        uint32_t trueOffset = instructions[++ip];
+        uint32_t falseOffset = instructions[++ip];
+        ip = condition ? ip + trueOffset : ip + falseOffset;
     }
         iptr = instructions.data() + ip + 1;
         NEXT;
@@ -464,14 +496,13 @@ public:
     {
         ip = (iptr - instructions.data()) - 1;
         if (callStack.empty()) {
-            std::cerr << "Error: Call stack underflow" << std::endl;
             return;
         }
-        uint32_t return_value = st.top();
+        // uint32_t return_value = st.top();
         ip = callStack.top(); callStack.pop();
         sts.pop_back();
         st = sts.back();
-        st.push(return_value);
+        // st.push(return_value);
     }
         iptr = instructions.data() + ip + 1;
         NEXT;
