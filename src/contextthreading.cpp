@@ -198,13 +198,12 @@ class ContextThreadingVM : public Interface {
     }
 
     inline void do_jmp() {
-        // 读取相对偏移量，并将其转换为有符号数
-        int32_t offset = (int32_t)instructions[++ip];
+        int32_t offset = static_cast<int32_t>(instructions[++ip]);
         ip += offset;
     }
 
     inline void do_jz() {
-        int32_t offset = (int32_t)instructions[++ip];
+        int32_t offset = static_cast<int32_t>(instructions[++ip]);
         if (st.top() == 0) {
             ip += offset;
         }
@@ -213,7 +212,7 @@ class ContextThreadingVM : public Interface {
 
     inline void do_jump_if() {
         uint32_t condition = st.top(); st.pop();
-        int32_t offset = (int32_t)instructions[++ip];
+        int32_t offset = static_cast<int32_t>(instructions[++ip]);
         if (condition) {
             ip += offset;
         }
@@ -221,10 +220,11 @@ class ContextThreadingVM : public Interface {
 
     inline void do_if_else() {
         uint32_t condition = st.top(); st.pop();
-        int32_t trueOffset = (int32_t)instructions[++ip];
-        int32_t falseOffset = (int32_t)instructions[++ip];
-        ip += (condition ? trueOffset : falseOffset);
+        int32_t trueOffset = static_cast<int32_t>(instructions[++ip]);
+        int32_t falseOffset = static_cast<int32_t>(instructions[++ip]);
+        ip += condition ? trueOffset : falseOffset;
     }
+
 
     inline void do_gt() {
         uint32_t a = st.top(); st.pop();
